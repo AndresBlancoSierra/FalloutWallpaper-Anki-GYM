@@ -1,0 +1,11 @@
+{
+  "x": 240,
+  "y": 14,
+  "size": 256,
+  "letter": 21,
+  "scale": 100,
+  "opacity": 100,
+  "glow": true,
+  "anim": true,
+  "color": "#ff0000"
+}

@@ -1,0 +1,53 @@
+(defpoll counter :interval "999999h"
+  "cat ~/.local/state/counter 2>/dev/null || echo 0")
+
+(defwidget counter-widget []
+  (box :halign "fill" :valign "fill"
+    (overlay :halign "fill" :valign "fill"
+      (image :path "/home/andres/Images/1920.png"
+             :image-width 1280
+             :image-height 720)
+      (label :text counter
+             :class "counter-number"
+             :halign "center"
+             :valign "center")
+      (image :path "/home/andres/Images/1920png.png"
+             :image-width 1280
+             :image-height 720))))
+
+(defwindow counter-overlay
+  :monitor 0
+  :windowtype "dock"
+  :stacking "bottom"
+  :geometry (geometry :x "0"
+                      :y "0"
+                      :width "100%"
+                      :height "100%"
+                      :anchor "top left")
+  (counter-widget))
+
+(defvar err_x "240")
+(defvar err_y "14")
+(defvar err_img "/home/andres/.config/eww/errormode-word.png")
+(defpoll err_css :interval "0.12s"
+  "python3 /home/andres/.config/eww/errormode-frame.py")
+
+(defwindow errormode
+  :monitor 0
+  :stacking "overlay"
+  :focusable "none"
+  :passthrough true
+  :namespace "fallout-error"
+  :geometry (geometry :x "0"
+                      :y "0"
+                      :width "100%"
+                      :height "100%"
+                      :anchor "top left")
+  (box :class "errormode"
+    :halign "fill"
+    :valign "fill"
+    (box :style "margin-top: ${err_y}px; margin-left: ${err_x}px;"
+      :halign "start"
+      :valign "start"
+      (box :style "${err_css}"
+        (image :path err_img)))))

@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="es" translate="no" data-palette="green">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google" content="notranslate">
+<title>Vault-Tec — Stats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+/* ================= BASE ================= */
+:root {
+  --phosphor: #18ff62;
+  --phosphor-soft: #4aef98;
+  --screen-bg: #001000;
+  --glitch-magenta: #ea36af;
+  --glitch-green: #75fa69;
+  --amber: #f0b000;
+  --amber-bright: #ffce00;
+
+  /* tintes del tema (verde) */
+  --line: rgba(24,255,98,0.45);
+  --line-strong: rgba(24,255,98,0.5);
+  --line-mid: rgba(24,255,98,0.4);
+  --line-soft: rgba(24,255,98,0.35);
+  --line-faint: rgba(24,255,98,0.3);
+  --panel-bg: rgba(24,255,98,0.035);
+  --panel-glow: rgba(24,255,98,0.05);
+  --tint-060: rgba(24,255,98,0.06);
+  --tint-080: rgba(24,255,98,0.08);
+  --tint-120: rgba(24,255,98,0.12);
+  --tint-160: rgba(24,255,98,0.16);
+  --today-bg: rgba(24,255,98,0.32);
+  --glow-soft: rgba(24,255,98,0.55);
+  --glow: rgba(24,255,98,0.6);
+  --glow-strong: rgba(24,255,98,0.7);
+  --glow-bright: rgba(24,255,98,0.8);
+  --glow-hot: rgba(24,255,98,0.95);
+  --name-tint: #eafff2;
+  --scanbar-grad: linear-gradient(to bottom, transparent 0%, rgba(24,255,98,0.06) 45%, rgba(24,255,98,0.12) 50%, rgba(24,255,98,0.06) 55%, transparent 100%);
+}
+html[data-palette="amber"] {
+  --phosphor: #f0b000;
+  --phosphor-soft: #ffce00;
+  --screen-bg: #1a1200;
+  --line: rgba(240,176,0,0.45);
+  --line-strong: rgba(240,176,0,0.5);
+  --line-mid: rgba(240,176,0,0.4);
+  --line-soft: rgba(240,176,0,0.35);
+  --line-faint: rgba(240,176,0,0.3);
+  --panel-bg: rgba(240,176,0,0.035);
+  --panel-glow: rgba(240,176,0,0.05);
+  --tint-060: rgba(240,176,0,0.06);
+  --tint-080: rgba(240,176,0,0.08);
+  --tint-120: rgba(240,176,0,0.12);
+  --tint-160: rgba(240,176,0,0.16);
+  --today-bg: rgba(240,176,0,0.32);
+  --glow-soft: rgba(240,176,0,0.55);
+  --glow: rgba(240,176,0,0.6);
+  --glow-strong: rgba(240,176,0,0.7);
+  --glow-bright: rgba(240,176,0,0.8);
+  --glow-hot: rgba(240,176,0,0.95);
+  --name-tint: #fff8e6;
+  --scanbar-grad: linear-gradient(to bottom, transparent 0%, rgba(240,176,0,0.07) 45%, rgba(240,176,0,0.14) 50%, rgba(240,176,0,0.07) 55%, transparent 100%);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #000; }
+body {
+  color: var(--phosphor);
+  font-family: 'VT323', 'Courier New', monospace;
+  overflow: hidden;
+}
+
+/* ================= PANTALLA (full-screen, sin chasis) ================= */
+#screen {
+  position: fixed;
+  inset: 0;
+  background: var(--screen-bg);
+  overflow: hidden;
+  transform: scale(0.75);
+  box-shadow: inset 0 0 70px 20px rgba(0,0,0,0.6);
+}
+#screen .glass {
+  position: absolute; inset: 0; pointer-events: none; z-index: 40;
+  box-shadow: inset 0 0 90px 24px rgba(0,0,0,0.62), inset 0 0 12px 2px rgba(255,255,255,0.05);
+  border-radius: 6px;
+}
+#content {
+  position: relative; z-index: 1;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 1.4rem 2rem 2rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+#content .panel { margin-top: auto; margin-bottom: auto; }
+#content::-webkit-scrollbar { width: 10px; }
+#content::-webkit-scrollbar-track { background: transparent; }
+#content::-webkit-scrollbar-thumb { background: var(--line-mid); border: 2px solid var(--screen-bg); }
+
+/* ================= OVERLAYS CRT ================= */
+.ov { position: absolute; inset: 0; pointer-events: none; z-index: 10; transition: opacity .3s; }
+.ov-scanlines { background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.28) 50%); background-size: 100% 3px; opacity: .9; }
+.ov-rgb { background: linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06)); background-size: 3px 100%; opacity: .7; }
+.ov-vignette { background: radial-gradient(circle, transparent 55%, rgba(0,0,0,0.62) 100%); }
+.ov-flicker { background: var(--screen-bg); animation: screenflicker 0.15s infinite; opacity: .06; z-index: 11; }
+@keyframes screenflicker {
+  0% { opacity: .07; } 5% { opacity: .10; } 10% { opacity: .06; }
+  15% { opacity: .11; } 20% { opacity: .07; } 25% { opacity: .10; }
+  30% { opacity: .06; } 35% { opacity: .09; } 40% { opacity: .11; }
+  45% { opacity: .07; } 50% { opacity: .09; } 55% { opacity: .06; }
+  60% { opacity: .10; } 65% { opacity: .08; } 70% { opacity: .10; }
+  75% { opacity: .06; } 80% { opacity: .09; } 85% { opacity: .07; }
+  90% { opacity: .10; } 95% { opacity: .07; } 100% { opacity: .09; }
+}
+.ov-noise {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  opacity: .05; animation: noisejump .35s steps(3) infinite;
+}
+@keyframes noisejump { 0% { transform: translate(0,0);} 33% { transform: translate(-6px,3px);} 66% { transform: translate(4px,-5px);} 100% { transform: translate(-2px,2px);} }
+.ov-scanbar { position: absolute; left: 0; right: 0; height: 90px; top: -90px;
+  background: var(--scanbar-grad);
+  animation: scanbar 7s linear infinite; opacity: .6; }
+@keyframes scanbar { 0% { top: -120px; } 100% { top: 120%; } }
+
+/* ================= TEXTO ================= */
+.txt, .txt * { text-shadow: 0 0 2px var(--phosphor), 0 0 8px var(--line); }
+h1, h2, h3 { margin: 0 0 .5rem; font-weight: 400; letter-spacing: .04em; }
+h1 { font-size: clamp(2rem, 5vw, 3.6rem); }
+p { line-height: 1.45; margin: .4rem 0; }
+.small { font-size: .85rem; opacity: .75; }
+.muted { opacity: .6; }
+
+/* ================= PANEL SPECIAL ================= */
+.panel {
+  border: 1px solid var(--line);
+  background: var(--panel-bg);
+  padding: 1.2rem 1.4rem;
+  margin-top: 1rem;
+  box-shadow: inset 0 0 30px var(--panel-glow);
+}
+
+.special-wrap { display: grid; grid-template-columns: minmax(280px, 1fr) 1.6fr; gap: 1.6rem; align-items: start; }
+@media (max-width: 760px) { .special-wrap { grid-template-columns: 1fr; } }
+
+.vaultboy-box { border: 1px solid var(--line-faint); padding: .6rem; background: radial-gradient(circle at 50% 35%, var(--tint-080), transparent 70%); text-align: center; }
+.vaultboy-stage { position: relative; min-height: 260px; display: flex; align-items: flex-end; justify-content: center; }
+.vaultboy-stage img {
+  width: 100%; max-width: 280px; height: auto;
+  filter: drop-shadow(0 0 8px var(--glow-soft));
+  transition: opacity .25s;
+}
+.vaultboy-stage img.clickable { cursor: pointer; }
+.vaultboy-stage img.clickable:hover { filter: drop-shadow(0 0 14px var(--glow-hot)); }
+.vaultboy-stage img.clickable:active { transform: translateY(1px); }
+.vaultboy-stage img.noclick { cursor: not-allowed; }
+.vaultboy-stage.gym { min-height: 224px; }
+.vaultboy-stage.gym img { height: 224px; width: 100%; object-fit: cover; object-position: center bottom; }
+.vaultboy-stage.gym.cropb { min-height: 168px; }
+.vaultboy-stage.gym.cropb img { object-position: center 70%; width: 210px; height: 168px; }
+.hint { margin-top: .4rem; font-size: .95rem; }
+.hint.ok { color: #fff; text-shadow: 0 0 6px var(--glow-bright); }
+.hint.deny { color: #ff6060; text-shadow: 0 0 6px rgba(255,60,60,0.7); }
+.hint.done { color: var(--phosphor-soft); }
+#screen.deny { animation: denyflash .32s ease-out; }
+@keyframes denyflash {
+  0% { box-shadow: inset 0 0 10px rgba(255,60,60,0.2); }
+  35% { box-shadow: inset 0 0 130px 46px rgba(255,60,60,0.5); }
+  100% { box-shadow: inset 0 0 70px 20px rgba(0,0,0,0.6); }
+}
+.vaultboy-desc { border-top: 1px solid var(--line-faint); margin-top: .6rem; padding: .6rem .2rem .2rem; font-size: 1rem; line-height: 1.4; min-height: 4.2em; }
+.stat-name { color: #fff; text-shadow: 0 0 6px var(--glow-strong); }
+.gym-list { margin-top: .3rem; text-align: left; }
+.gym-ex { margin-bottom: .45rem; }
+.gym-name { color: var(--name-tint); font-size: .95rem; }
+.gym-prog { margin-top: .05rem; font-size: .9rem; color: var(--phosphor); }
+.gym-prog.no-prog { color: var(--line-mid); }
+.gym-delta.up { color: #39ff14; text-shadow: 0 0 6px rgba(57,255,20,0.6); }
+.gym-delta.down { color: #ff6060; text-shadow: 0 0 6px rgba(255,60,60,0.6); }
+.gym-prog .n { color: #fff; }
+
+.special-list { display: flex; flex-direction: column; gap: .6rem; }
+.special-row { display: grid; grid-template-columns: 40px 110px 1fr 46px; gap: .5rem; align-items: center; cursor: pointer; padding: .2rem .3rem; margin: 0 -.3rem; transition: background .15s; }
+.special-row:hover { background: var(--tint-080); }
+.special-row.selected { background: var(--tint-160); outline: 1px dashed var(--line-strong); outline-offset: -3px; }
+.special-row.selected .name, .special-row.selected .val { color: #fff; text-shadow: 0 0 8px var(--glow-bright); }
+.special-row .letter { font-size: 1.8rem; color: #fff; background: var(--tint-120); border: 1px solid var(--line-mid); text-align: center; line-height: 1.35; }
+.special-row.today .letter { background: var(--today-bg); border-color: var(--phosphor); box-shadow: 0 0 8px var(--glow-soft); }
+.special-row.today .name { color: #fff; }
+.special-row.done .val { color: var(--phosphor-soft); opacity: .85; }
+.special-row.done .segbar i { opacity: .55; }
+.special-row.today.done .letter { box-shadow: 0 0 10px var(--glow-strong); }
+.special-row .name { font-size: 1.2rem; }
+.special-row .val { text-align: right; font-size: 1.6rem; color: #fff; }
+
+.segbar { display: flex; gap: 2px; }
+.segbar i { flex: 1; height: 14px; background: var(--tint-080); border: 1px solid var(--line-soft); }
+.segbar i.on { background: var(--phosphor); border-color: var(--phosphor); box-shadow: 0 0 6px var(--glow); }
+
+.hpbar { margin-top: 1.2rem; display: grid; grid-template-columns: 44px 1fr 60px 1fr 70px; gap: .5rem; align-items: center; font-size: 1rem; }
+.hpbar .label { text-transform: uppercase; }
+.hpbar .segbar i.on.hp { background: #39ff14; border-color: #39ff14; box-shadow: 0 0 8px rgba(57,255,20,0.7); }
+.hpbar .segbar i.on.ap { background: #fff; border-color: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.5); }
+.hpbar .segbar i.on.xp { background: var(--phosphor-soft); border-color: var(--phosphor-soft); }
+
+/* ================= SYNC ANKI ================= */
+.syncbar {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;
+  margin-top: 1rem; border: 1px dashed var(--line-faint); padding: .5rem .8rem;
+}
+.syncbar button {
+  font-family: inherit; font-size: 1rem; background: transparent; color: var(--phosphor);
+  border: 1px solid var(--line-strong); padding: .2rem .7rem; cursor: pointer; text-transform: uppercase;
+  text-shadow: 0 0 6px var(--glow);
+}
+.syncbar button:hover { background: var(--phosphor); color: var(--screen-bg); text-shadow: none; }
+.syncbar.ok { border-color: var(--glow); background: var(--tint-060); }
+.syncbar.off { border-color: rgba(255,60,60,0.4); }
+#anki-status { font-size: .95rem; }
+#anki-sync-status { margin-top: .15rem; }
+
+/* ================= VHS BURST ================= */
+#vhs-burst { position: fixed; inset: 0; z-index: 100; pointer-events: none; display: none; }
+body.vhs #vhs-burst { display: block; animation: vhstrack .45s steps(2, jump-none) both; }
+@keyframes vhstrack {
+  0% { transform: skewX(-4deg) translateY(-12px); }
+  30% { transform: skewX(5deg) translateY(18px); }
+  60% { transform: skewX(-6deg) translateY(-8px); }
+  100% { transform: skewX(0) translateY(0); }
+}
+body.vhs #screen { animation: vhssplit .45s steps(2, jump-none) both; }
+@keyframes vhssplit {
+  0% { filter: none; transform: scale(0.75); }
+  20% { filter: hue-rotate(-30deg) contrast(1.4); transform: translateX(6px) skewX(-2deg) scale(0.75); }
+  45% { filter: hue-rotate(40deg) saturate(2) contrast(1.2); transform: translateX(-8px) skewX(3deg) scale(0.75); }
+  70% { filter: hue-rotate(-15deg); transform: translateX(3px) scale(0.75); }
+  100% { filter: none; transform: scale(0.75); }
+}
+#vhs-strip { position: fixed; left: 0; right: 0; top: 30%; height: 40px; z-index: 101; pointer-events: none; background: linear-gradient(90deg, var(--tint-120), rgba(255,255,255,0.25), var(--tint-120)); display: none; }
+body.vhs #vhs-strip { display: block; animation: strip .45s linear both; }
+@keyframes strip { 0% { top: 20%; opacity: 0; } 30% { opacity: 1; } 100% { top: 70%; opacity: 0; } }
+
+/* ================= ALERTA DE DÍA (ERROR ROJO) ================= */
+body.alert {
+  --phosphor: #ff2020;
+  --phosphor-soft: #ff5a5a;
+  --screen-bg: #160000;
+  --line: rgba(255,45,45,0.5);
+  --line-strong: rgba(255,45,45,0.55);
+  --line-mid: rgba(255,45,45,0.45);
+  --line-soft: rgba(255,45,45,0.4);
+  --line-faint: rgba(255,45,45,0.35);
+  --panel-bg: rgba(255,32,32,0.06);
+  --panel-glow: rgba(255,32,32,0.09);
+  --tint-060: rgba(255,32,32,0.08);
+  --tint-080: rgba(255,32,32,0.10);
+  --tint-120: rgba(255,32,32,0.16);
+  --tint-160: rgba(255,32,32,0.20);
+  --today-bg: rgba(255,32,32,0.36);
+  --glow-soft: rgba(255,45,45,0.6);
+  --glow: rgba(255,45,45,0.65);
+  --glow-strong: rgba(255,45,45,0.75);
+  --glow-bright: rgba(255,45,45,0.85);
+  --glow-hot: rgba(255,45,45,1);
+  --name-tint: #ffe9e9;
+  --scanbar-grad: linear-gradient(to bottom, transparent 0%, rgba(255,45,45,0.10) 45%, rgba(255,45,45,0.22) 50%, rgba(255,45,45,0.10) 55%, transparent 100%);
+}
+#alert-tint {
+  position: fixed; inset: 0; z-index: 50; pointer-events: none;
+  background: rgba(255,0,0,0.10); mix-blend-mode: multiply; display: none;
+}
+body.alert #alert-tint { display: block; }
+#error-alert {
+  position: fixed; inset: 0; z-index: 60; pointer-events: none;
+  display: none; flex-direction: column; align-items: center; justify-content: flex-start;
+  gap: 1.1rem; text-align: center; padding: 2rem;
+  padding-top: calc(36vh - clamp(3.5rem, 10vw, 8rem));
+}
+body.alert #error-alert { display: flex; }
+#err-word {
+  font-size: clamp(7rem, 20vw, 16rem); line-height: 1;
+  color: #ff0000; letter-spacing: .08em; font-family: inherit;
+  text-shadow: 0 0 4px #ff0000, 0 0 18px rgba(255,0,0,0.8), 0 0 60px rgba(255,0,0,0.5);
+  animation: errpulse 1.1s steps(2, jump-none) infinite;
+}
+#err-sub { font-size: clamp(1.4rem, 3.4vw, 2.4rem); color: var(--phosphor-soft); }
+#err-sub .err-line { display: block; margin: .15rem 0; }
+#err-hint { display: none; }
+@keyframes errpulse {
+  0% { opacity: 1; transform: scale(1); }
+  25% { opacity: .35; transform: scale(1.03); }
+  50% { opacity: 1; transform: scale(0.99); }
+  75% { opacity: .45; transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
+}
+body.alert #err-word {
+  animation: errpulse .8s steps(3, jump-none) infinite, errjitter .4s steps(2, jump-none) infinite;
+}
+@keyframes errjitter {
+  0% { transform: translate(0,0); }
+  33% { transform: translate(-2px,1px); }
+  66% { transform: translate(2px,-1px); }
+  100% { transform: translate(-1px,2px); }
+}
+</style>
+</head>
+<body>
+
+<div id="screen">
+  <div id="content">
+
+    <div id="daily-status" class="small"></div>
+
+    <div class="panel">
+      <div class="special-wrap">
+        <div class="vaultboy-box">
+          <div class="vaultboy-stage">
+            <img id="vault-boy-img" src="img/special/Strength.png" alt="Vault Boy - Strength">
+          </div>
+          <div id="vault-boy-desc" class="vaultboy-desc">
+            <span class="stat-name">PUSH</span> — PROGRESIÓN DE EMPUJE: PRESS, FLEXIONES Y TRABAJO DE PECHO Y HOMBROS.
+          </div>
+          <div id="anki-sync-status" class="hint muted"></div>
+          <div id="click-hint" class="hint muted"></div>
+        </div>
+
+        <div class="special-list" id="special-list"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="glass"></div>
+  <div class="ov ov-scanlines" data-fx="scanlines"></div>
+  <div class="ov ov-rgb" data-fx="rgb"></div>
+  <div class="ov ov-vignette" data-fx="vignette"></div>
+  <div class="ov ov-flicker" data-fx="flicker"></div>
+  <div class="ov ov-noise" data-fx="noise"></div>
+  <div class="ov-scanbar" data-fx="scanbar"></div>
+</div>
+
+<div id="vhs-burst"></div>
+<div id="vhs-strip"></div>
+
+<div id="alert-tint"></div>
+<div id="error-alert">
+  <div id="err-word">ERROR</div>
+  <div id="err-sub"></div>
+  <div id="err-hint"></div>
+</div>
+
+<script>
+/* ================= DATOS ================= */
+const SPECIAL = [
+  { letter: "P", name: "PUSH", val: 0, max: 104, img: "img/special/Strength.png",
+    desc: "Progresión de empuje: press, flexiones y trabajo de pecho y hombros." },
+  { letter: "U", name: "PULL", val: 0, max: 104, img: "img/perks/Fo4_Iron_Fist.png",
+    desc: "Progresión de tracción: dominadas, remo y trabajo de espalda." },
+  { letter: "L", name: "LEG", val: 0, max: 104, img: "img/perks/Fo4_Strong_Back.png",
+    desc: "Día de piernas: sentadillas, zancadas y potencia de tren inferior." },
+  { letter: "V", name: "VOLLEY", val: 0, max: 365, img: "img/perks/Fo4_Solar_Powered.png",
+    desc: "Rendimiento en la cancha: saques, remates y recepción." },
+  { letter: "M", name: "MEDITATION", val: 0, max: 365, img: "img/perks/Fo4_Life_Giver.png",
+    desc: "Práctica diaria de meditación: respiración, atención plena y calma." },
+  { letter: "G", name: "GERMAN", val: 0, img: "img/special/Intelligence.png",
+    desc: "Repaso diario de alemán: tarjetas, vocabulario y constancia." },
+  { letter: "D", name: "DRAW", val: 0, max: 365, img: "img/perks/Fo4_Rooted.png",
+    desc: "Dibujo diario: trazo, proporción y creatividad." },
+  { letter: "H", name: "HACKERMAN", val: 0, img: "img/perks/Fo4_Hacker.png",
+    desc: "Nivel técnico: retos, scripts y aprendizaje de código y hacking." }
+];
+
+/* ================= SELECT ================= */
+function selectStat(i) {
+  currentSel = i;
+  const s = SPECIAL[i];
+  document.querySelectorAll("#special-list .special-row").forEach((r, idx) => r.classList.toggle("selected", idx === i));
+  const img = document.getElementById("vault-boy-img");
+  img.style.opacity = 0;
+  setTimeout(() => {
+    img.src = s.img;
+    img.alt = `Vault Boy - ${s.name}`;
+    img.style.opacity = 1;
+  }, 120);
+  renderDesc(s);
+  updateClickHint(s);
+}
+
+function segBar(count, filled, cls) {
+  let h = "";
+  for (let i = 0; i < count; i++) h += `<i class="${i < filled ? "on" : ""} ${cls || ""}"></i>`;
+  return h;
+}
+
+function buildSpecial() {
+  const list = document.getElementById("special-list");
+  list.innerHTML = SPECIAL.map((s, i) => `
+    <div class="special-row${i === currentSel ? " selected" : ""}" data-i="${i}" role="button" tabindex="0">
+      <div class="letter">${s.letter}</div>
+      <div class="name">${s.name}</div>
+      <div class="segbar">${segBar(10, s.val)}</div>
+      <div class="val">${s.val}</div>
+    </div>`).join("");
+
+  list.querySelectorAll(".special-row").forEach(row => {
+    const i = +row.dataset.i;
+    row.addEventListener("click", () => selectStat(i));
+    row.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectStat(i); }
+    });
+  });
+}
+
+/* ================= SINCRONIZACIÓN ANKICONNECT ================= */
+const ANKI_URL = "http://127.0.0.1:8765";
+const DECK_SYNC = [
+  { stat: "GERMAN", keywords: ["1000", "refold", "deutsch", "deutch"], label: "palabras" },
+  { stat: "HACKERMAN", deck: "Hackerman", label: "tarjetas" }
+];
+
+async function anki(action, params) {
+  const res = await fetch(ANKI_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, version: 6, params })
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.result;
+}
+
+function updateSyncedRow(statName, learned, total) {
+  const idx = SPECIAL.findIndex(s => s.name === statName);
+  if (idx < 0) return;
+  recordHackSnapshot(statName, learned);
+  SPECIAL[idx].val = learned;
+  const row = document.querySelectorAll("#special-list .special-row")[idx];
+  if (!row) return;
+  const pct = total > 0 ? learned / total : 0;
+  row.querySelector(".segbar").innerHTML = segBar(10, Math.round(pct * 10));
+  row.querySelector(".val").textContent = learned;
+  row.title = `${learned} / ${total} (${Math.round(pct * 100)}%)`;
+  cacheAnki(statName, learned, total);
+  if (idx === currentSel) updateAnkiStatus(SPECIAL[idx]);
+  checkAlert();
+}
+
+async function chunkCardInfo(ids, size = 800) {
+  const learned = [];
+  for (let i = 0; i < ids.length; i += size) {
+    const chunk = ids.slice(i, i + size);
+    const cards = await anki("cardsInfo", { cards: chunk });
+    for (const c of cards) if ((c.reps || 0) > 0) learned.push(c.cardId);
+  }
+  return learned.length;
+}
+
+/* ================= CACHÉ ANKI ================= */
+const ANKI_CACHE_KEY = "vt_anki_cache";
+
+function loadAnkiCache() {
+  try { return JSON.parse(localStorage.getItem(ANKI_CACHE_KEY)) || {}; } catch (e) { return {}; }
+}
+function cacheAnki(statName, learned, total) {
+  const c = loadAnkiCache();
+  c[statName] = { learned, total };
+  try { localStorage.setItem(ANKI_CACHE_KEY, JSON.stringify(c)); } catch (e) { /* sin almacenamiento */ }
+}
+function applyAnkiCache() {
+  const c = loadAnkiCache();
+  for (const name in c) updateSyncedRow(name, c[name].learned, c[name].total);
+}
+
+async function syncAnki() {
+  try {
+    const decks = await anki("deckNames");
+    for (const cfg of DECK_SYNC) {
+      let match;
+      if (cfg.deck) {
+        match = decks.find(d => d.toLowerCase() === cfg.deck.toLowerCase())
+             || decks.find(d => d.toLowerCase().startsWith(cfg.deck.toLowerCase() + "::"));
+      } else {
+        match = decks.find(d => cfg.keywords.some(k => d.toLowerCase().includes(k)));
+      }
+      if (!match) {
+        updateSyncedRow(cfg.stat, 0, 0);
+        continue;
+      }
+      // deck:"..." (con comillas) rompe el parser de búsqueda de Anki en esta
+      // instalación; el nombre sin comillas incluye el mazo y todos sus subdecks.
+      const ids = await anki("findCards", { query: `deck:${match}` });
+      const total = ids.length;
+      const learned = total > 0 ? await chunkCardInfo(ids) : 0;
+      updateSyncedRow(cfg.stat, learned, total);
+    }
+  } catch (e) {
+    /* Anki sin conexión: se muestran los valores de la caché */
+  }
+}
+
+/* ================= CONTADOR DIARIO (GYM / VOLLEY / DRAW) ================= */
+const DAILY_KEY = "vt_daily";
+const POINTS_API = "/api/points";
+const GYM_DAYS = { 1: "PUSH", 4: "PUSH", 2: "PULL", 5: "PULL", 3: "LEG", 6: "LEG" };
+const DAY_NAMES = ["DOMINGO", "LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
+
+let currentSel = (() => {
+  const i = SPECIAL.findIndex(s => s.name === GYM_DAYS[new Date().getDay()]);
+  return i < 0 ? SPECIAL.findIndex(s => s.name === "MEDITATION") : i;
+})();
+let daily = loadDaily();
+let _sentAlertState = null;
+
+function loadDaily() {
+  try { return JSON.parse(localStorage.getItem(DAILY_KEY)) || {}; } catch (e) { return {}; }
+}
+function saveDaily() {
+  try { localStorage.setItem(DAILY_KEY, JSON.stringify(daily)); } catch (e) { /* sin almacenamiento */ }
+}
+
+/* Los puntos viven en points.md (Obsidian, sincronizado entre equipos).
+   El servidor (serve.py) es quien los lee/escribe; aquí solo mantenemos
+   una copia local como caché para funcionar sin servidor. */
+async function syncPointsFromServer() {
+  try {
+    const r = await fetch(POINTS_API);
+    if (!r.ok) throw new Error("bad status");
+    const data = await r.json();
+    daily = { counters: data.counters || {}, done: data.done || {} };
+    saveDaily();
+    renderDaily();
+    updateClickHint(SPECIAL[currentSel]);
+  } catch (e) { /* sin servidor: se usa la caché local */ }
+}
+async function postPoints(stat, action) {
+  try {
+    const r = await fetch(POINTS_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stat, action })
+    });
+    if (!r.ok) throw new Error("bad status");
+    const data = await r.json();
+    daily = { counters: data.counters || {}, done: data.done || {} };
+    saveDaily();
+    return true;
+  } catch (e) { return false; }
+}
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function isGymDay(stat) {
+  return GYM_DAYS[new Date().getDay()] === stat;
+}
+function isEligible(stat) {
+  if (stat === "PUSH" || stat === "PULL" || stat === "LEG") return isGymDay(stat);
+  return true;
+}
+function counterOf(stat) {
+  return (daily.counters && daily.counters[stat]) || 0;
+}
+function doneToday(stat) {
+  return !!(daily.done && daily.done[stat] === todayStr());
+}
+function canIncrement(s) {
+  if (s.max == null) return { ok: false, why: "SYNC" };
+  if (!isEligible(s.name)) return { ok: false, why: "NOT_TODAY" };
+  if (doneToday(s.name)) return { ok: false, why: "DONE" };
+  if (counterOf(s.name) >= s.max) return { ok: false, why: "MAX" };
+  return { ok: true };
+}
+
+function denyFlash() {
+  const sc = document.getElementById("screen");
+  sc.classList.remove("deny");
+  void sc.offsetWidth;
+  sc.classList.add("deny");
+  setTimeout(() => sc.classList.remove("deny"), 340);
+}
+
+function updateAnkiStatus(s) {
+  const el = document.getElementById("anki-sync-status");
+  if (!el) return;
+  let text = "";
+  if (s.max == null) {
+    const c = loadAnkiCache()[s.name] || {};
+    if (c.total != null) {
+      const pct = c.total > 0 ? Math.round(100 * (c.learned || 0) / c.total) : 0;
+      text = `${s.name}: ${c.learned || 0} / ${c.total} (${pct}%)`;
+    }
+  }
+  el.textContent = text;
+  el.style.display = text ? "" : "none";
+}
+
+function updateClickHint(s) {
+  const el = document.getElementById("click-hint");
+  const img = document.getElementById("vault-boy-img");
+  if (!el || !img) return;
+  updateAnkiStatus(s);
+  const res = canIncrement(s);
+  img.classList.toggle("clickable", res.ok);
+  img.classList.toggle("noclick", !res.ok);
+  if (s.max == null) {
+    el.textContent = "SINCRONIZADO CON ANKI (sin clic manual)";
+    el.className = "hint muted";
+  } else if (res.ok) {
+    el.textContent = "CLIC IZQ → +1 · CLIC DER → −1";
+    el.className = "hint ok";
+  } else if (res.why === "DONE") {
+    el.textContent = "YA CONTADO HOY ✓";
+    el.className = "hint done";
+  } else if (res.why === "MAX") {
+    el.textContent = "MÁXIMO ALCANZADO (" + s.max + ")";
+    el.className = "hint done";
+  } else {
+    el.textContent = "HOY NO APLICA (" + DAY_NAMES[new Date().getDay()] + ")";
+    el.className = "hint deny";
+  }
+}
+
+function incrementStat(s) {
+  const res = canIncrement(s);
+  if (!res.ok) {
+    if (res.why === "SYNC") updateClickHint(s);
+    else denyFlash();
+    updateDailyStatus();
+    return;
+  }
+  const prev = daily.counters[s.name] || 0;
+  daily.counters = daily.counters || {};
+  daily.done = daily.done || {};
+  daily.counters[s.name] = prev + 1;
+  daily.done[s.name] = todayStr();
+  saveDaily();
+  renderDaily();
+  postPoints(s.name, "inc").then(ok => { if (!ok) saveDaily(); });
+  const el = document.getElementById("click-hint");
+  if (el) { el.textContent = s.name + " +1 ✓ (" + daily.counters[s.name] + "/" + s.max + ")"; el.className = "hint ok"; }
+  glitchBurst();
+}
+
+function decrementStat(s) {
+  const c = counterOf(s.name);
+  if (s.max == null) { updateClickHint(s); return; }
+  if (c <= 0) { denyFlash(); updateClickHint(s); return; }
+  daily.counters = daily.counters || {};
+  daily.done = daily.done || {};
+  daily.counters[s.name] = c - 1;
+  if (doneToday(s.name)) delete daily.done[s.name];
+  saveDaily();
+  renderDaily();
+  postPoints(s.name, "dec").then(ok => { if (!ok) saveDaily(); });
+  const el = document.getElementById("click-hint");
+  if (el) { el.textContent = s.name + " −1 (" + daily.counters[s.name] + "/" + s.max + ")"; el.className = "hint done"; }
+}
+
+function updateDailyStatus() {
+  const status = document.getElementById("daily-status");
+  if (!status) return;
+  const hoy = GYM_DAYS[new Date().getDay()];
+  const tags = SPECIAL.filter(s => s.max != null).map(s => {
+    const mark = doneToday(s.name) ? "✓" : (s.name === hoy ? "▶" : (isEligible(s.name) ? "·" : "✗"));
+    return `${mark}${s.name}`;
+  });
+  status.textContent = (hoy ? `HOY: ${hoy}` : "HOY: DESCANSO") + " — " + tags.join("  ");
+}
+
+/* ================= ALERTA DE DÍA (ERROR ROJO) ================= */
+function todayGymStat() { return GYM_DAYS[new Date().getDay()]; }
+function yestStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+const HACK_KEY = "vt_hack_streak";
+function loadHackHistory() {
+  try { return JSON.parse(localStorage.getItem(HACK_KEY)) || {}; } catch (e) { return {}; }
+}
+function saveHackHistory(h) {
+  try { localStorage.setItem(HACK_KEY, JSON.stringify(h)); } catch (e) { /* sin almacenamiento */ }
+}
+function recordHackSnapshot(stat, learned) {
+  const h = loadHackHistory();
+  h[stat] = h[stat] || {};
+  h[stat][todayStr()] = Math.max(h[stat][todayStr()] || 0, learned);
+  saveHackHistory(h);
+}
+function hackAlertActive(stat) {
+  const h = loadHackHistory()[stat] || {};
+  const t = todayStr();
+  const y = yestStr();
+  if (h[y] == null || h[t] == null) return false;
+  return h[t] <= h[y];
+}
+function activeErrors() {
+  const errs = [];
+  for (const s of SPECIAL) {
+    if (s.max == null) continue;
+    if (!isEligible(s.name)) continue;
+    if (!doneToday(s.name)) errs.push({ type: "daily", stat: s.name });
+  }
+  if (hackAlertActive("HACKERMAN")) errs.push({ type: "anki", stat: "HACKERMAN" });
+  if (hackAlertActive("GERMAN")) errs.push({ type: "anki", stat: "GERMAN" });
+  return errs;
+}
+function checkAlert() {
+  const errs = activeErrors();
+  const isAlert = errs.length > 0;
+  const wasAlert = document.body.classList.contains("alert");
+  document.body.classList.toggle("alert", isAlert);
+  if (!wasAlert && isAlert) glitchBurst();
+  if (isAlert !== _sentAlertState) {
+    _sentAlertState = isAlert;
+    postAlertState();
+  }
+  const sub = document.getElementById("err-sub");
+  if (sub) {
+    sub.innerHTML = errs.map(e => e.type === "daily"
+      ? `<span class="err-line">HOY: ${e.stat} — SIN COMPLETAR</span>`
+      : `<span class="err-line">${e.stat} — SIN PROGRESO HOY</span>`).join("");
+  }
+}
+
+function postAlertState() {
+  try {
+    fetch("/api/alert", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state: document.body.classList.contains("alert") }),
+    });
+  } catch (e) { /* el servidor puede no estar levantado */ }
+}
+
+function renderDaily() {
+  const rows = document.querySelectorAll("#special-list .special-row");
+  SPECIAL.forEach((s, i) => {
+    if (s.max == null) return;
+    const c = counterOf(s.name);
+    s.val = c;
+    const row = rows[i];
+    if (!row) return;
+    row.querySelector(".segbar").innerHTML = segBar(10, Math.round((c / s.max) * 10));
+    row.querySelector(".val").textContent = c;
+    row.title = `${c} / ${s.max}`;
+    row.classList.toggle("today", isGymDay(s.name));
+    row.classList.toggle("done", doneToday(s.name));
+  });
+  updateDailyStatus();
+  checkAlert();
+}
+
+/* ================= GYM (OBSIDIAN) ================= */
+const GYM_CACHE_KEY = "vt_gym_cache";
+const GYM_GROUP = { PUSH: "Push", PULL: "Pull", LEG: "Leg" };
+let gymData = loadGymCache();
+
+function loadGymCache() {
+  try {
+    const d = JSON.parse(localStorage.getItem(GYM_CACHE_KEY));
+    return (d && d.data) || null;
+  } catch (e) { return null; }
+}
+function saveGymCache(data) {
+  try { localStorage.setItem(GYM_CACHE_KEY, JSON.stringify({ data: data, t: Date.now() })); } catch (e) { /* sin almacenamiento */ }
+}
+async function loadGym() {
+  try {
+    const r = await fetch("/api/gym");
+    if (!r.ok) throw new Error("bad status");
+    gymData = await r.json();
+    saveGymCache(gymData);
+    applyGymToDesc();
+  } catch (e) { /* sin servidor: se usa la caché */ }
+}
+function fmtKg(v) {
+  const n = Number(v);
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+function renderDesc(s) {
+  const el = document.getElementById("vault-boy-desc");
+  const stage = document.querySelector(".vaultboy-stage");
+  if (stage) {
+    stage.classList.toggle("gym", !!GYM_GROUP[s.name]);
+    stage.classList.toggle("cropb", s.name === "PULL" || s.name === "LEG");
+  }
+  if (GYM_GROUP[s.name]) { renderGymDesc(s); return; }
+  el.innerHTML = `<span class="stat-name">${s.name}</span> — ${s.desc.toUpperCase()}`;
+}
+function applyGymToDesc() {
+  const s = SPECIAL[currentSel];
+  if (s && GYM_GROUP[s.name]) renderGymDesc(s);
+}
+function renderGymDesc(s) {
+  const el = document.getElementById("vault-boy-desc");
+  const exs = (gymData && gymData[GYM_GROUP[s.name]]) || null;
+  if (!exs) {
+    el.innerHTML = `<span class="stat-name">${s.name}</span> — CARGANDO PROGRESIÓN GYM...`;
+    return;
+  }
+  let html = `<span class="stat-name">${s.name}</span> — PROGRESIÓN EN KG`;
+  html += `<div class="gym-list">`;
+  for (const e of exs) {
+    html += `<div class="gym-ex"><div class="gym-name">${e.name}</div>`;
+    if (e.delta == null) {
+      html += `<div class="gym-prog no-prog">— sin kilos registrados</div>`;
+    } else {
+      const d = Number(e.delta);
+      const cls = d > 0 ? "up" : (d < 0 ? "down" : "");
+      const sign = d > 0 ? "+" : "";
+      html += `<div class="gym-prog"><span class="n">${fmtKg(e.initial)} → ${fmtKg(e.last)} kg</span>`
+        + ` <span class="gym-delta ${cls}">${sign}${fmtKg(d)} kg</span> · ${e.sessions} ses.</div>`;
+    }
+    html += `</div>`;
+  }
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+/* ================= FX (solo glitch ambiental) ================= */
+function glitchBurst() {
+  document.body.classList.add("vhs");
+  setTimeout(() => document.body.classList.remove("vhs"), 480);
+}
+
+/* ================= EVENTOS / INIT ================= */
+document.addEventListener("keydown", e => { if (e.key.toLowerCase() === "g") glitchBurst(); });
+setInterval(() => { if (Math.random() < 0.5) glitchBurst(); }, 11000);
+
+buildSpecial();
+renderDaily();
+renderDesc(SPECIAL[currentSel]);
+const vbImg = document.getElementById("vault-boy-img");
+vbImg.src = SPECIAL[currentSel].img;
+vbImg.alt = `Vault Boy - ${SPECIAL[currentSel].name}`;
+document.getElementById("vault-boy-img").addEventListener("click", () => incrementStat(SPECIAL[currentSel]));
+document.getElementById("vault-boy-img").addEventListener("contextmenu", e => {
+  e.preventDefault();
+  decrementStat(SPECIAL[currentSel]);
+});
+applyAnkiCache();
+syncAnki();
+loadGym();
+syncPointsFromServer();
+setInterval(syncAnki, 60000);
+setInterval(loadGym, 60000);
+setInterval(syncPointsFromServer, 60000);
+updateClickHint(SPECIAL[currentSel]);
+checkAlert();
+setInterval(() => {
+  renderDaily();
+  updateClickHint(SPECIAL[currentSel]);
+}, 30000);
+// Auto-reparación del overlay ERROR: si algo lo dejó caído (p. ej. el hider de
+// Anki murió) mientras el modo alerta sigue activo, se re-emite el estado para
+// que serve.py vuelva a abrir el overlay y resucite el hider.
+setInterval(() => {
+  if (document.body.classList.contains("alert")) postAlertState();
+}, 30000);
+</script>
+</body>
+</html>

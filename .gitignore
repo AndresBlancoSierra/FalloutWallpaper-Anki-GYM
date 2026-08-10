@@ -1,0 +1,14 @@
+# Artefactos locales / de ejecución
+__pycache__/
+*.pyc
+*.pyo
+*.log
+
+# Render del overlay de ERROR (imágenes generadas por eww/errormode-render.py)
+eww/errormode-word.png
+eww/errormode-word-*.png
+
+# Estado/datos de usuario (no se suben)
+*.state
+tmp/
+.DS_Store
