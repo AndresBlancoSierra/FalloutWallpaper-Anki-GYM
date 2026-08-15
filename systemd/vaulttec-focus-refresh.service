@@ -1,0 +1,26 @@
+# VAULT-TEC FOCUS — health-check de AdGuard (servicio de SISTEMA, root).
+#
+# Mientras el modo foco esté activo (flag focus-net.active): cada 30 s comprueba
+# que AdGuard siga operativo; si está caído lo reinicia y re-aplica las user_rules
+# de la blocklist (adguard/blocklist.txt). Feed de lo que hace scripts/focus-net.sh
+# on|off: el bloqueo en modo ERROR es SOLO DNS (AdGuard) + dropin de resolved.
+#
+# Lo controla scripts/focus-net.sh on|off. Se instala como
+# /etc/systemd/system/vaulttec-focus-refresh.service (setup/install.sh
+# sustituye __REPO__/__HOME__). Corriendo como root: no depende de la sesión
+# gráfica. Si el flag desaparece, el script sale con 0 y systemd no lo relanza.
+
+[Unit]
+Description=VAULT-TEC focus: health-check de AdGuard (modo ERROR)
+Documentation=file://__REPO__/docs/USAGE.md
+After=adguardhome.service network-online.target
+
+[Service]
+Type=simple
+Environment=HOME=__HOME__
+ExecStart=/bin/bash __REPO__/scripts/focus-refresh.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

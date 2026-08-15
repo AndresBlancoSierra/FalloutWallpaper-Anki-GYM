@@ -11,9 +11,11 @@ primera y la última sesión con peso numérico.
 
 import json
 import os
+import re
 import subprocess
 import tempfile
 import threading
+import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -22,14 +24,17 @@ GYM_ROOT = Path(os.environ.get(
     "GYM_ROOT", os.path.expanduser("~/Documents/obsidian/Me/GYM")))
 POINTS_FILE = Path(os.environ.get(
     "POINTS_FILE", os.path.expanduser("~/Documents/obsidian/Me/points.md")))
+READ_FILE = Path(os.environ.get(
+    "READ_FILE", os.path.expanduser("~/Documents/obsidian/Me/Read/Read.md")))
 GROUPS = ("Push", "Pull", "Leg")
 
-# Stats que admiten clic manual (mismo orden/llaves que SPECIAL en el HTML)
-MANUAL_STATS = ("PUSH", "PULL", "LEG", "VOLLEY", "MEDITATION", "DRAW")
+# Stats que admiten clic manual (mismo orden/llaves que SPECIAL en el HTML).
+# Racha = días consecutivos: barra 0-365. GERMAN/HACKERMAN son de Anki (sin clic).
+MANUAL_STATS = ("GYM", "VOLLEY", "MEDITATION", "DRAW", "COOL SHOWER", "READ")
 # Fechas en ISO local (YYYY-MM-DD)
-import datetime
 _today = datetime.date.today
 _today_str = lambda: _today().isoformat()
+_yesterday_str = lambda: (_today() - datetime.timedelta(days=1)).isoformat()
 
 
 def _num(value):
@@ -83,13 +88,31 @@ def parse_gym():
     return result
 
 
+def parse_read():
+    """Lee Read/Read.md: líneas con checkbox. [x]=terminado, [ ]=en progreso."""
+    done, progress = [], []
+    try:
+        text = READ_FILE.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return {"done": [], "progress": []}
+    for line in text.splitlines():
+        m = re.match(r"^\s*-\s*\[([ xX])\]\s*(.+?)\s*$", line)
+        if m:
+            title = m.group(2).strip()
+            if m.group(1) in ("x", "X"):
+                done.append(title)
+            else:
+                progress.append(title)
+    return {"done": done, "progress": progress}
+
+
 def default_points():
-    return {"counters": {s: 0 for s in MANUAL_STATS},
+    return {"streaks": {s: {"n": 0, "last": None} for s in MANUAL_STATS},
             "done": {}}
 
 
 def parse_points():
-    """Lee el bloque ```json ... ``` de points.md y devuelve counters/done."""
+    """Lee el bloque ```json ... ``` de points.md y devuelve streaks/done."""
     data = default_points()
     try:
         text = POINTS_FILE.read_text(encoding="utf-8", errors="replace")
@@ -111,18 +134,26 @@ def parse_points():
         raw = json.loads("\n".join(block))
     except (TypeError, ValueError):
         return data
-    counters = raw.get("counters") or {}
+    streaks = raw.get("streaks") or {}
     done = raw.get("done") or {}
-    data["counters"] = {s: counters.get(s, 0) for s in MANUAL_STATS}
+    norm = {}
+    for s in MANUAL_STATS:
+        v = streaks.get(s) or {}
+        try:
+            n = int(v.get("n", 0) or 0)
+        except (TypeError, ValueError):
+            n = 0
+        norm[s] = {"n": max(0, n), "last": v.get("last")}
+    data["streaks"] = norm
     data["done"] = {str(k): str(v) for k, v in done.items()}
     return data
 
 
 def write_points(data):
     """Escribe points.md de forma atómica (tmp + rename) preservando el bloque json."""
-    counters = data.get("counters") or {}
+    streaks = data.get("streaks") or {}
     done = data.get("done") or {}
-    payload = {"counters": {s: counters.get(s, 0) for s in MANUAL_STATS},
+    payload = {"streaks": {s: streaks.get(s, {"n": 0, "last": None}) for s in MANUAL_STATS},
                "done": done}
     content = (
         "# Vault-Tec Points\n"
@@ -178,12 +209,65 @@ class Handler(SimpleHTTPRequestHandler):
             pass
         self._send_json({"ok": True, "mode": mode})
 
+    def _read_body(self):
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            return json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+        except (ValueError, TypeError):
+            return {}
+
+    def _handle_read(self):
+        # Toggle de una checkbox de libro en Read/Read.md: [ ] <-> [x].
+        payload = self._read_body()
+        book = str(payload.get("book") or "").strip()
+        if not book:
+            self._send_json({"error": "falta 'book'"}, status=400)
+            return
+        try:
+            text = READ_FILE.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            text = ""
+        lines = text.split("\n")
+        target = book.casefold()
+        found = False
+        for i, line in enumerate(lines):
+            m = re.match(r"^(\s*-\s*\[)([ xX])(\]\s*)(.*?)\s*$", line)
+            if not m:
+                continue
+            if m.group(4).casefold() != target:
+                continue
+            new_box = " " if m.group(2) in ("x", "X") else "x"
+            lines[i] = f"{m.group(1)}{new_box}{m.group(3)}{m.group(4).strip()}"
+            found = True
+            break
+        if found:
+            READ_FILE.parent.mkdir(parents=True, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=str(READ_FILE.parent),
+                                       prefix=".read.", suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    f.write("\n".join(lines))
+                os.replace(tmp, str(READ_FILE))
+            except Exception:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
+                raise
+        self._send_json(parse_read())
+
     def do_GET(self):
         if self.path.startswith("/api/gym"):
             try:
                 self._send_json(parse_gym())
             except Exception:
                 self._send_json({"error": "no se pudo leer el vault"})
+            return
+        if self.path.startswith("/api/read"):
+            try:
+                self._send_json(parse_read())
+            except Exception:
+                self._send_json({"error": "no se pudo leer Read/Read.md"}, status=500)
             return
         if self.path.startswith("/api/points"):
             try:
@@ -197,16 +281,14 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.startswith("/api/alert"):
             self._handle_alert()
             return
+        if self.path.startswith("/api/read"):
+            self._handle_read()
+            return
         if not self.path.startswith("/api/points"):
             self.send_response(404)
             self.end_headers()
             return
-        try:
-            length = int(self.headers.get("Content-Length") or 0)
-            payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
-        except (ValueError, TypeError):
-            self._send_json({"error": "json inválido"}, status=400)
-            return
+        payload = self._read_body()
         stat = str(payload.get("stat") or "").upper()
         action = str(payload.get("action") or "").lower()
         if stat not in MANUAL_STATS or action not in ("inc", "dec"):
@@ -214,15 +296,17 @@ class Handler(SimpleHTTPRequestHandler):
             return
         try:
             data = parse_points()
-            c = int(data["counters"].get(stat, 0))
+            sdata = data["streaks"].get(stat, {"n": 0, "last": None})
+            prev = int(sdata.get("n") or 0)
             if action == "inc":
-                c += 1
+                n = prev + 1 if sdata.get("last") == _yesterday_str() else 1
+                data["streaks"][stat] = {"n": n, "last": _today_str()}
                 data["done"][stat] = _today_str()
             else:
-                c = max(0, c - 1)
+                # Deshacer hoy NO destruye la racha: se vuelve al valor de ayer.
+                data["streaks"][stat] = {"n": max(0, prev - 1), "last": _yesterday_str()}
                 if data.get("done", {}).get(stat) == _today_str():
                     data["done"].pop(stat, None)
-            data["counters"][stat] = c
             write_points(data)
             self._send_json(data)
         except Exception:

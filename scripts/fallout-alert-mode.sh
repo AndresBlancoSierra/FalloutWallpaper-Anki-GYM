@@ -80,9 +80,18 @@ redden() {
 init() {
   mkdir -p "$BASE"
 
-  # Backup del mako normal (una sola vez)
-  if [ ! -f "$MAKO_NORMAL" ] && [ -f "$MAKO" ]; then
-    cp -a "$MAKO" "$MAKO_NORMAL"
+  # Backup del mako normal (una sola vez), como fichero REAL. El backup
+  # original quedó como symlink colgante (cp -a preserva el symlink si MAKO
+  # apunta al tema) y hacía que `cp -a` abortara init() bajo set -e, dejando
+  # theme-red sin reconstruir. Si MAKO ya está "enrojecido", se restaura desde
+  # el mako.ini del tema normal.
+  if [ ! -f "$MAKO_NORMAL" ]; then
+    rm -f "$MAKO_NORMAL"
+    if [ -f "$NORMAL/mako.ini" ]; then
+      cp -a "$NORMAL/mako.ini" "$MAKO_NORMAL" 2>/dev/null || true
+    elif [ -f "$MAKO" ]; then
+      cp -a "$MAKO" "$MAKO_NORMAL" 2>/dev/null || true
+    fi
   fi
 
   # Si current/theme ya no es nuestro symlink (primer run o `omarchy theme set`),
@@ -94,7 +103,7 @@ init() {
     rm -rf "$T"
     ln -s "$NORMAL" "$T"
     if [ -f "$MAKO_NORMAL" ]; then
-      cp -a "$MAKO_NORMAL" "$MAKO"
+      cp -a "$MAKO_NORMAL" "$MAKO" 2>/dev/null || true
     fi
   fi
 
@@ -102,6 +111,13 @@ init() {
   rm -rf "$RED"
   cp -a "$NORMAL" "$RED"
   redden "$RED"
+
+  # Validación: si NORMAL tenía hyprland.conf y RED no lo tiene, la derivación
+  # falló a medias (p.ej. cp interrumpido) -> avisar para no repetir el error
+  # de "source= globbing error" de hyprland.conf línea 13.
+  if [ -f "$NORMAL/hyprland.conf" ] && [ ! -f "$RED/hyprland.conf" ]; then
+    echo "[fallout] AVISO: theme-red derivado sin hyprland.conf (cp interrumpido?)" >&2
+  fi
 }
 
 apply_restarts() {
@@ -116,8 +132,18 @@ apply_restarts() {
 # eww con :passthrough (build custom); el daemon se levanta on-demand.
 EWW_BIN="$HOME/.local/bin/eww"
 ANKI_HIDER="$HOME/.local/bin/fallout-anki-hider.sh"
+FOCUS_NET="$HOME/.local/bin/focus-net.sh"
 
 errormode_on() {
+  # Bloqueo de distracciones (AdGuard + dropin resolved, ver docs/FOCUS.md):
+  # mientras el modo ERROR esté activo se bloquea solo la blocklist
+  # (adguard/blocklist.txt); todo lo demás pasa. fail-closed: si AdGuard cae,
+  # el DNS cae y systemd lo relanza en ~10 s.
+  if [ -x "$FOCUS_NET" ]; then
+    bash "$FOCUS_NET" on
+  else
+    echo "[fallout] aviso: falta $FOCUS_NET (setup/install.sh)"
+  fi
   [ -x "$EWW_BIN" ] || return 0
   pgrep -x eww >/dev/null 2>&1 || { nohup "$EWW_BIN" daemon >/dev/null 2>&1 & sleep 0.5; }
   "$EWW_BIN" open errormode 2>/dev/null || true
@@ -129,6 +155,9 @@ errormode_on() {
 }
 
 errormode_off() {
+  if [ -x "$FOCUS_NET" ]; then
+    bash "$FOCUS_NET" off
+  fi
   [ -x "$EWW_BIN" ] || return 0
   pgrep -x eww >/dev/null 2>&1 || return 0
   pgrep -f "[f]allout-anki-hider.sh" >/dev/null 2>&1 && pkill -f "[f]allout-anki-hider.sh" >/dev/null 2>&1 || true

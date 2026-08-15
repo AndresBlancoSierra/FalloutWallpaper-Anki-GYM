@@ -20,6 +20,20 @@ hyprpm enable hyprwinwrap
 exec-once = hyprpm reload   # en hyprland.conf (para que cargue al arrancar)
 ```
 
+> **Tras cada actualización de Hyprland** (p. ej. `pacman -Syu` que toque
+> `hyprland`): el binario del plugin queda compilado contra las cabeceras
+> viejas y `hyprpm reload` falla en el arranque con:
+> `headers are not up-to-date, please run hyprpm update`. Síntoma: el
+> wallpaper de Fallout se ve como una ventana flotante normal en vez de
+> quedarse de fondo. Solución:
+>
+> ```bash
+> hyprpm update        # recompila hyprwinwrap contra el Hyprland actual
+> ```
+>
+> después, relanza la ventana del wallpaper (matarla y `fallout.py` la crea de
+> nuevo enrollada como fondo) o reinicia la sesión.
+
 ## 3. eww con `:passthrough` (requerido por el overlay de ERROR)
 
 El eww de los repos de Arch no soporta `:passthrough`. Hay que compilar el

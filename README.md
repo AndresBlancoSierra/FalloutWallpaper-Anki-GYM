@@ -1,8 +1,10 @@
 # FalloutWallpaper-Anki-GYM
 
 Fondo de pantalla vivo estilo **Pip-Boy de Fallout** para Hyprland que fusiona tu
-vida real con tus stats: rutina de **gimnasio** (PUSH/PULL/LEG con progresión en
-kg leída de tu vault de Obsidian), **vóley**, **meditación**, **dibujo** y
+vida real con tus stats: rutina de **gimnasio** (modo único **GYM** que muestra
+la rutina del día —empuje, tracción o piernas— con progresión en kg leída de tu
+vault de Obsidian y descanso **BREAK** los domingos), **vóley**, **meditación**,
+**dibujo**, **ducha fría**, **lectura** (con tu lista de libros de Obsidian) y
 repaso de tarjetas de **Anki** (Alemán + Hackerman).
 
 Todo el escritorio se vuelve **rojo y muestra "ERROR" encima de todo** cuando
@@ -12,26 +14,33 @@ quedan tareas pendientes del día, y vuelve a la normalidad al completarlas.
 
 ## Qué hace
 
-- **Pip-Boy animado**: selecciona automáticamente el stat del día (día de PULL →
-  Vault Boy de PULL con la progresión en kg de dominadas, curl, remo…), con
-  glitch/scanlines CRT, ruido y jitter.
-- **Contadores diarios** con un clic: +1 / −1 en cada stat (persistidos en
-  `points.md` vía `serve.py`).
+- **Pip-Boy animado**: selecciona automáticamente el modo **GYM**, que muestra la
+  rutina del día (lun/jue empuje, mar/vie tracción, mié/sáb piernas) con su
+  Vault Boy y la progresión en kg del grupo correspondiente; el domingo muestra
+  **BREAK** sin imagen ni puntos, con el día de descanso sumado solo.
+- **Rachas 0–365** (1 año) en GYM, VOLLEY, MEDITATION, DRAW, COOL SHOWER y READ:
+  cada día completado suma +1 a la racha; si un día se falla, la racha vuelve a 0.
+  El clic derecho deshace el día actual.
+- **READ con libros de Obsidian**: el modo READ muestra tu lista
+  (`Read/Read.md`) con checkboxes — **terminados** y **en progreso**— y puedes
+  marcar/desmarcar un libro directamente desde el wallpaper.
 - **Sync con AnkiConnect** cada 60 s: cuenta tarjetas aprendidas por mazo
-  (Alemán y Hackerman) y las muestra en la interfaz.
-- **Modo ERROR automático**: mientras falte completar la rutina del día
-  (gimnasio + vóley + meditación + dibujo) o Hackerman/Alemán no superen las
-  tarjetas del día anterior, todo el escritorio cambia a la paleta roja y un
-  overlay de eww muestra la palabra **ERROR** flotando **encima de cualquier
-  ventana** (pero *passthrough*: los clics siguen pasando).
+  (Alemán y Hackerman) y las muestra en su propia barra (sin racha ni clic).
+- **Modo ERROR automático**: mientras falte completar alguna tarea del día
+  (GYM + vóley + meditación + dibujo + ducha fría + lectura) o Hackerman/Alemán
+  no sumen **al menos +10 tarjetas nuevas** sobre el día anterior, todo el
+  escritorio cambia a la paleta roja y un overlay de eww muestra la palabra
+  **ERROR** flotando **encima de cualquier ventana** (pero *passthrough*: los
+  clics siguen pasando).
 - **Overlay con posicionamiento/animación tuneable** (glow, parpadeo, jitter,
   escala) emulado desde el CSS del wallpaper mediante ImageMagick + un
   `defpoll` de eww.
 - **Excepción Anki**: si abres Anki, es la **única** ventana que se muestra
   por encima del texto de ERROR (el overlay se oculta mientras Anki está
   abierto y reaparece al cerrarlo).
-- **Auto-reparación**: el wallpaper re-emite su estado de alerta cada 30 s, así
-  que si el overlay cae por lo que sea, se reabre solo.
+- **Refresco manual**: un botón **⟳** en la barra de estado diario actualiza
+  todo a demanda (tarjetas de Anki, rachas, libros, progreso GYM) y reabre el
+  overlay si cayó; no hay re-emisión automática periódica del overlay.
 - **Automático al iniciar sesión**: sirve + lanza el fondo vía Hyprland
   (`autostart.conf`) y sobrevive a reinicios.
 

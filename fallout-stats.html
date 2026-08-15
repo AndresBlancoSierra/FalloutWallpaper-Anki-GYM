@@ -135,6 +135,34 @@ p { line-height: 1.45; margin: .4rem 0; }
 .small { font-size: .85rem; opacity: .75; }
 .muted { opacity: .6; }
 
+/* ================= BARRA DE ESTADO DIARIO + REFRESCO ================= */
+.daily-bar {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+.refresh-btn {
+  background: transparent;
+  border: 1px solid var(--line-mid);
+  color: var(--phosphor);
+  font-family: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: .1rem .35rem;
+  border-radius: .2rem;
+  cursor: pointer;
+  text-shadow: 0 0 4px var(--glow-soft);
+  box-shadow: 0 0 6px rgba(0,0,0,.35) inset;
+  transition: border-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.refresh-btn:hover {
+  border-color: var(--line-strong);
+  color: var(--name-tint);
+  box-shadow: 0 0 10px var(--glow-soft);
+}
+.refresh-btn.spinning { animation: refreshspin .7s linear; }
+@keyframes refreshspin { to { transform: rotate(360deg); } }
+
 /* ================= PANEL SPECIAL ================= */
 .panel {
   border: 1px solid var(--line);
@@ -182,6 +210,14 @@ p { line-height: 1.45; margin: .4rem 0; }
 .gym-delta.up { color: #39ff14; text-shadow: 0 0 6px rgba(57,255,20,0.6); }
 .gym-delta.down { color: #ff6060; text-shadow: 0 0 6px rgba(255,60,60,0.6); }
 .gym-prog .n { color: #fff; }
+.read-item { display: flex; align-items: center; gap: .5rem; margin-bottom: .3rem; }
+.read-cb {
+  background: transparent; border: 1px solid var(--line-mid); color: var(--phosphor);
+  font-family: inherit; font-size: .95rem; line-height: 1.2; padding: 0 .35rem; cursor: pointer;
+  text-shadow: 0 0 4px var(--glow-soft);
+}
+.read-cb:hover { background: var(--tint-120); border-color: var(--phosphor); }
+.read-title.done { text-decoration: line-through; opacity: .7; }
 
 .special-list { display: flex; flex-direction: column; gap: .6rem; }
 .special-row { display: grid; grid-template-columns: 40px 110px 1fr 46px; gap: .5rem; align-items: center; cursor: pointer; padding: .2rem .3rem; margin: 0 -.3rem; transition: background .15s; }
@@ -313,7 +349,10 @@ body.alert #err-word {
 <div id="screen">
   <div id="content">
 
-    <div id="daily-status" class="small"></div>
+    <div id="daily-bar" class="daily-bar">
+      <div id="daily-status" class="small"></div>
+      <button id="refresh-btn" class="refresh-btn" title="Actualizar ahora" aria-label="Actualizar ahora">⟳</button>
+    </div>
 
     <div class="panel">
       <div class="special-wrap">
@@ -322,7 +361,7 @@ body.alert #err-word {
             <img id="vault-boy-img" src="img/special/Strength.png" alt="Vault Boy - Strength">
           </div>
           <div id="vault-boy-desc" class="vaultboy-desc">
-            <span class="stat-name">PUSH</span> — PROGRESIÓN DE EMPUJE: PRESS, FLEXIONES Y TRABAJO DE PECHO Y HOMBROS.
+            <span class="stat-name">GYM</span> — RUTINA DEL DÍA: EMPUJE, TRACCIÓN O PIERNAS SEGÚN EL DÍA; DESCANSO LOS DOMINGOS.
           </div>
           <div id="anki-sync-status" class="hint muted"></div>
           <div id="click-hint" class="hint muted"></div>
@@ -356,22 +395,24 @@ body.alert #err-word {
 <script>
 /* ================= DATOS ================= */
 const SPECIAL = [
-  { letter: "P", name: "PUSH", val: 0, max: 104, img: "img/special/Strength.png",
-    desc: "Progresión de empuje: press, flexiones y trabajo de pecho y hombros." },
-  { letter: "U", name: "PULL", val: 0, max: 104, img: "img/perks/Fo4_Iron_Fist.png",
-    desc: "Progresión de tracción: dominadas, remo y trabajo de espalda." },
-  { letter: "L", name: "LEG", val: 0, max: 104, img: "img/perks/Fo4_Strong_Back.png",
-    desc: "Día de piernas: sentadillas, zancadas y potencia de tren inferior." },
+  { letter: "G", name: "GYM", val: 0, max: 365, img: "",
+    desc: "Rutina del día: empuje, tracción o piernas según el día; descanso los domingos." },
   { letter: "V", name: "VOLLEY", val: 0, max: 365, img: "img/perks/Fo4_Solar_Powered.png",
     desc: "Rendimiento en la cancha: saques, remates y recepción." },
   { letter: "M", name: "MEDITATION", val: 0, max: 365, img: "img/perks/Fo4_Life_Giver.png",
     desc: "Práctica diaria de meditación: respiración, atención plena y calma." },
-  { letter: "G", name: "GERMAN", val: 0, img: "img/special/Intelligence.png",
-    desc: "Repaso diario de alemán: tarjetas, vocabulario y constancia." },
   { letter: "D", name: "DRAW", val: 0, max: 365, img: "img/perks/Fo4_Rooted.png",
     desc: "Dibujo diario: trazo, proporción y creatividad." },
+  { letter: "C", name: "COOL SHOWER", val: 0, max: 365, img: "img/special/Endurance.png",
+    desc: "Ducha fría diaria: constancia, aguante y claridad mental." },
+  { letter: "R", name: "READ", val: 0, max: 365, img: "img/special/Perception.png",
+    desc: "Lectura diaria: libros terminados y en progreso." },
+  { letter: "E", name: "GERMAN", val: 0, img: "img/special/Intelligence.png",
+    desc: "Repaso diario de alemán: tarjetas, vocabulario y constancia." },
   { letter: "H", name: "HACKERMAN", val: 0, img: "img/perks/Fo4_Hacker.png",
-    desc: "Nivel técnico: retos, scripts y aprendizaje de código y hacking." }
+    desc: "Nivel técnico: retos, scripts y aprendizaje de código y hacking." },
+  { letter: "P", name: "PIANO", val: 0, img: "img/special/Charisma.png",
+    desc: "Práctica de piano: escalas, técnica, piezas y constancia." }
 ];
 
 /* ================= SELECT ================= */
@@ -379,10 +420,16 @@ function selectStat(i) {
   currentSel = i;
   const s = SPECIAL[i];
   document.querySelectorAll("#special-list .special-row").forEach((r, idx) => r.classList.toggle("selected", idx === i));
+  const info = s.name === "GYM" ? todayGymInfo() : null;
   const img = document.getElementById("vault-boy-img");
   img.style.opacity = 0;
   setTimeout(() => {
-    img.src = s.img;
+    if (info && !info.group) {
+      img.style.display = "none";
+      return;
+    }
+    img.style.display = "";
+    img.src = info ? info.img : s.img;
     img.alt = `Vault Boy - ${s.name}`;
     img.style.opacity = 1;
   }, 120);
@@ -419,8 +466,12 @@ function buildSpecial() {
 const ANKI_URL = "http://127.0.0.1:8765";
 const DECK_SYNC = [
   { stat: "GERMAN", keywords: ["1000", "refold", "deutsch", "deutch"], label: "palabras" },
-  { stat: "HACKERMAN", deck: "Hackerman", label: "tarjetas" }
+  { stat: "HACKERMAN", deck: "Hackerman", label: "tarjetas" },
+  { stat: "PIANO", deck: "Piano", label: "tarjetas" }
 ];
+// Meta diaria de Anki: hoy deben responderse AL MENOS esta cantidad de tarjetas
+// (rated:1) para que el día cuente como completado.
+const ANKI_MIN_DELTA = 10;
 
 async function anki(action, params) {
   const res = await fetch(ANKI_URL, {
@@ -434,10 +485,13 @@ async function anki(action, params) {
   return data.result;
 }
 
-function updateSyncedRow(statName, learned, total) {
+function updateSyncedRow(statName, learned, total, rated) {
   const idx = SPECIAL.findIndex(s => s.name === statName);
   if (idx < 0) return;
-  recordHackSnapshot(statName, learned);
+  cacheAnki(statName, learned, total, rated);
+  // El snapshot diario (meta +10) solo se graba con datos EN VIVO de
+  // AnkiConnect; la caché aplicada al cargar no debe tocar el historial.
+  if (rated != null) recordHackSnapshot(statName, rated);
   SPECIAL[idx].val = learned;
   const row = document.querySelectorAll("#special-list .special-row")[idx];
   if (!row) return;
@@ -445,7 +499,6 @@ function updateSyncedRow(statName, learned, total) {
   row.querySelector(".segbar").innerHTML = segBar(10, Math.round(pct * 10));
   row.querySelector(".val").textContent = learned;
   row.title = `${learned} / ${total} (${Math.round(pct * 100)}%)`;
-  cacheAnki(statName, learned, total);
   if (idx === currentSel) updateAnkiStatus(SPECIAL[idx]);
   checkAlert();
 }
@@ -466,9 +519,10 @@ const ANKI_CACHE_KEY = "vt_anki_cache";
 function loadAnkiCache() {
   try { return JSON.parse(localStorage.getItem(ANKI_CACHE_KEY)) || {}; } catch (e) { return {}; }
 }
-function cacheAnki(statName, learned, total) {
+function cacheAnki(statName, learned, total, rated) {
   const c = loadAnkiCache();
   c[statName] = { learned, total };
+  if (rated != null) c[statName].rated = rated;
   try { localStorage.setItem(ANKI_CACHE_KEY, JSON.stringify(c)); } catch (e) { /* sin almacenamiento */ }
 }
 function applyAnkiCache() {
@@ -488,7 +542,7 @@ async function syncAnki() {
         match = decks.find(d => cfg.keywords.some(k => d.toLowerCase().includes(k)));
       }
       if (!match) {
-        updateSyncedRow(cfg.stat, 0, 0);
+        updateSyncedRow(cfg.stat, 0, 0, 0);
         continue;
       }
       // deck:"..." (con comillas) rompe el parser de búsqueda de Anki en esta
@@ -496,7 +550,14 @@ async function syncAnki() {
       const ids = await anki("findCards", { query: `deck:${match}` });
       const total = ids.length;
       const learned = total > 0 ? await chunkCardInfo(ids) : 0;
-      updateSyncedRow(cfg.stat, learned, total);
+      // Meta del día: cartas RESPONDIDAS hoy (rated:1). En esta instalación
+      // `introduced:1` no registra las nuevas estudiadas por custom study en el
+      // celular (verificado: 5 nuevas estrenadas hoy daban introduced:1=0) y a
+      // veces cuenta cartas nunca estudiadas; rated:1 coincide con la actividad
+      // real del día (revlog). El total acumulado fluctúa al importar/borrar
+      // tarjetas, así que compararlo entre días da deltas falsos.
+      const newIds = await anki("findCards", { query: `deck:${match} rated:1` });
+      updateSyncedRow(cfg.stat, learned, total, newIds.length);
     }
   } catch (e) {
     /* Anki sin conexión: se muestran los valores de la caché */
@@ -507,12 +568,22 @@ async function syncAnki() {
 const DAILY_KEY = "vt_daily";
 const POINTS_API = "/api/points";
 const GYM_DAYS = { 1: "PUSH", 4: "PUSH", 2: "PULL", 5: "PULL", 3: "LEG", 6: "LEG" };
+const GYM_STAT_GROUP = { PUSH: "Push", PULL: "Pull", LEG: "Leg" };
+const GYM_GROUP_IMG = {
+  Push: "img/special/Strength.png",
+  Pull: "img/perks/Fo4_Iron_Fist.png",
+  Leg: "img/perks/Fo4_Strong_Back.png"
+};
 const DAY_NAMES = ["DOMINGO", "LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
 
-let currentSel = (() => {
-  const i = SPECIAL.findIndex(s => s.name === GYM_DAYS[new Date().getDay()]);
-  return i < 0 ? SPECIAL.findIndex(s => s.name === "MEDITATION") : i;
-})();
+function todayGymInfo() {
+  const stat = GYM_DAYS[new Date().getDay()];
+  if (!stat) return { group: null, img: null, cropb: false };
+  const group = GYM_STAT_GROUP[stat];
+  return { group, img: GYM_GROUP_IMG[group], cropb: group === "Pull" || group === "Leg" };
+}
+
+let currentSel = SPECIAL.findIndex(s => s.name === "GYM");
 let daily = loadDaily();
 let _sentAlertState = null;
 
@@ -531,7 +602,17 @@ async function syncPointsFromServer() {
     const r = await fetch(POINTS_API);
     if (!r.ok) throw new Error("bad status");
     const data = await r.json();
-    daily = { counters: data.counters || {}, done: data.done || {} };
+    const serverDone = data.done || {};
+    // Write-back: si un POST previo falló (servidor caído), el cliente quedó
+    // con done[hoy] que el servidor no tiene; se re-envía para no perder la
+    // racha (causa típica de rachas que "bajan" solas).
+    for (const s of SPECIAL) {
+      if (s.max == null) continue;
+      if (daily.done && daily.done[s.name] === todayStr() && serverDone[s.name] !== todayStr()) {
+        postPoints(s.name, "inc");
+      }
+    }
+    daily = { streaks: data.streaks || {}, done: data.done || {} };
     saveDaily();
     renderDaily();
     updateClickHint(SPECIAL[currentSel]);
@@ -546,7 +627,7 @@ async function postPoints(stat, action) {
     });
     if (!r.ok) throw new Error("bad status");
     const data = await r.json();
-    daily = { counters: data.counters || {}, done: data.done || {} };
+    daily = { streaks: data.streaks || {}, done: data.done || {} };
     saveDaily();
     return true;
   } catch (e) { return false; }
@@ -555,24 +636,47 @@ function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+function yestStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 function isGymDay(stat) {
+  if (stat === "GYM") return !!todayGymInfo().group;
   return GYM_DAYS[new Date().getDay()] === stat;
 }
 function isEligible(stat) {
-  if (stat === "PUSH" || stat === "PULL" || stat === "LEG") return isGymDay(stat);
+  if (stat === "GYM") return isGymDay(stat);
   return true;
 }
-function counterOf(stat) {
-  return (daily.counters && daily.counters[stat]) || 0;
+function streakOf(stat) {
+  return (daily.streaks && daily.streaks[stat] && daily.streaks[stat].n) || 0;
+}
+function streakLast(stat) {
+  return (daily.streaks && daily.streaks[stat] && daily.streaks[stat].last) || null;
+}
+/* Racha "efectiva": el valor guardado vale mientras el último día hecho sea
+   hoy o ayer. Si pasó un día completo sin hacer la actividad, se reinicia (0).
+   GERMAN/HACKERMAN/PIANO (max==null) no usan rachas. */
+function effectiveStreak(stat) {
+  const last = streakLast(stat);
+  if (last !== todayStr() && last !== yestStr()) return 0;
+  return streakOf(stat);
+}
+function displayVal(stat) {
+  return effectiveStreak(stat);
+}
+function isComplete(s) {
+  return s.max != null && effectiveStreak(s.name) >= s.max;
 }
 function doneToday(stat) {
   return !!(daily.done && daily.done[stat] === todayStr());
 }
 function canIncrement(s) {
   if (s.max == null) return { ok: false, why: "SYNC" };
+  if (isComplete(s)) return { ok: false, why: "MAX" };
   if (!isEligible(s.name)) return { ok: false, why: "NOT_TODAY" };
   if (doneToday(s.name)) return { ok: false, why: "DONE" };
-  if (counterOf(s.name) >= s.max) return { ok: false, why: "MAX" };
   return { ok: true };
 }
 
@@ -593,6 +697,10 @@ function updateAnkiStatus(s) {
     if (c.total != null) {
       const pct = c.total > 0 ? Math.round(100 * (c.learned || 0) / c.total) : 0;
       text = `${s.name}: ${c.learned || 0} / ${c.total} (${pct}%)`;
+      const h = loadHackHistory()[s.name] || {};
+      const done = h[todayStr()] || 0;
+      const need = Math.max(0, ANKI_MIN_DELTA - done);
+      text += need > 0 ? ` — faltan ${need} tarjetas para ${ANKI_MIN_DELTA}` : ` — meta ${ANKI_MIN_DELTA} ✓`;
     }
   }
   el.textContent = text;
@@ -619,6 +727,9 @@ function updateClickHint(s) {
   } else if (res.why === "MAX") {
     el.textContent = "MÁXIMO ALCANZADO (" + s.max + ")";
     el.className = "hint done";
+  } else if (s.name === "GYM") {
+    el.textContent = "HOY: BREAK — DESCANSO (sin rutina ni puntos)";
+    el.className = "hint deny";
   } else {
     el.textContent = "HOY NO APLICA (" + DAY_NAMES[new Date().getDay()] + ")";
     el.className = "hint deny";
@@ -633,54 +744,85 @@ function incrementStat(s) {
     updateDailyStatus();
     return;
   }
-  const prev = daily.counters[s.name] || 0;
-  daily.counters = daily.counters || {};
+  daily.streaks = daily.streaks || {};
   daily.done = daily.done || {};
-  daily.counters[s.name] = prev + 1;
+  const prev = streakOf(s.name);
+  const n = streakLast(s.name) === yestStr() ? prev + 1 : 1;
+  daily.streaks[s.name] = { n, last: todayStr() };
   daily.done[s.name] = todayStr();
   saveDaily();
   renderDaily();
   postPoints(s.name, "inc").then(ok => { if (!ok) saveDaily(); });
   const el = document.getElementById("click-hint");
-  if (el) { el.textContent = s.name + " +1 ✓ (" + daily.counters[s.name] + "/" + s.max + ")"; el.className = "hint ok"; }
+  if (el) { el.textContent = s.name + " +1 ✓ (racha " + n + "/" + s.max + ")"; el.className = "hint ok"; }
   glitchBurst();
 }
 
 function decrementStat(s) {
-  const c = counterOf(s.name);
   if (s.max == null) { updateClickHint(s); return; }
-  if (c <= 0) { denyFlash(); updateClickHint(s); return; }
-  daily.counters = daily.counters || {};
+  if (!doneToday(s.name)) { denyFlash(); updateClickHint(s); return; }
+  daily.streaks = daily.streaks || {};
   daily.done = daily.done || {};
-  daily.counters[s.name] = c - 1;
-  if (doneToday(s.name)) delete daily.done[s.name];
+  const prev = streakOf(s.name);
+  const back = Math.max(0, prev - 1);
+  // Deshacer hoy NO destruye la racha: se vuelve al valor de ayer.
+  daily.streaks[s.name] = { n: back, last: yestStr() };
+  delete daily.done[s.name];
   saveDaily();
   renderDaily();
   postPoints(s.name, "dec").then(ok => { if (!ok) saveDaily(); });
   const el = document.getElementById("click-hint");
-  if (el) { el.textContent = s.name + " −1 (" + daily.counters[s.name] + "/" + s.max + ")"; el.className = "hint done"; }
+  if (el) { el.textContent = s.name + " −1 (racha " + back + "/" + s.max + ")"; el.className = "hint done"; }
 }
 
 function updateDailyStatus() {
   const status = document.getElementById("daily-status");
   if (!status) return;
-  const hoy = GYM_DAYS[new Date().getDay()];
+  const info = todayGymInfo();
   const tags = SPECIAL.filter(s => s.max != null).map(s => {
-    const mark = doneToday(s.name) ? "✓" : (s.name === hoy ? "▶" : (isEligible(s.name) ? "·" : "✗"));
+    const mark = doneToday(s.name) ? "✓"
+      : (isComplete(s) ? "★"
+        : (s.name === "GYM" && info.group ? "▶"
+          : (isEligible(s.name) ? "·" : "✗")));
     return `${mark}${s.name}`;
   });
-  status.textContent = (hoy ? `HOY: ${hoy}` : "HOY: DESCANSO") + " — " + tags.join("  ");
+  status.textContent = (info.group ? "HOY: GYM" : "HOY: BREAK") + " — " + tags.join("  ");
+}
+
+/* ================= REFRESCO MANUAL ================= */
+function manualRefresh() {
+  syncAnki();
+  loadGym();
+  loadRead();
+  syncPointsFromServer();
+  autoGymRestDay();
+  renderDaily();
+  checkAlert();
+  if (document.body.classList.contains("alert")) postAlertState();
+  const b = document.getElementById("refresh-btn");
+  if (b) {
+    b.classList.remove("spinning");
+    void b.offsetWidth;
+    b.classList.add("spinning");
+    setTimeout(() => b.classList.remove("spinning"), 750);
+  }
 }
 
 /* ================= ALERTA DE DÍA (ERROR ROJO) ================= */
 function todayGymStat() { return GYM_DAYS[new Date().getDay()]; }
-function yestStr() {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 const HACK_KEY = "vt_hack_streak";
+const HACK_V_KEY = "vt_hack_v";
+// v3 de la meta Anki: se cuentan cartas RESPONDIDAS por día (rated:1), no el
+// total acumulado. v2 usaba introduced:1, pero en esta instalación no registra
+// las nuevas de custom study / celular (verificado con 5 nuevas el mismo día).
+// El historial viejo quedó contaminado (snapshots inflados por la caché y por
+// un mazo que crece/encoge); se descarta UNA vez.
+(function migrateHackHistory() {
+  if (localStorage.getItem(HACK_V_KEY) === "3") return;
+  try { localStorage.removeItem(HACK_KEY); } catch (e) {}
+  try { localStorage.setItem(HACK_V_KEY, "3"); } catch (e) {}
+})();
 function loadHackHistory() {
   try { return JSON.parse(localStorage.getItem(HACK_KEY)) || {}; } catch (e) { return {}; }
 }
@@ -694,21 +836,22 @@ function recordHackSnapshot(stat, learned) {
   saveHackHistory(h);
 }
 function hackAlertActive(stat) {
+  // Meta: al menos ANKI_MIN_DELTA tarjetas RESPONDIDAS HOY.
+  // Sin comparación con ayer: el total acumulado es poco fiable.
   const h = loadHackHistory()[stat] || {};
-  const t = todayStr();
-  const y = yestStr();
-  if (h[y] == null || h[t] == null) return false;
-  return h[t] <= h[y];
+  return (h[todayStr()] || 0) < ANKI_MIN_DELTA;
 }
 function activeErrors() {
   const errs = [];
   for (const s of SPECIAL) {
     if (s.max == null) continue;
+    if (isComplete(s)) continue;
     if (!isEligible(s.name)) continue;
     if (!doneToday(s.name)) errs.push({ type: "daily", stat: s.name });
   }
   if (hackAlertActive("HACKERMAN")) errs.push({ type: "anki", stat: "HACKERMAN" });
   if (hackAlertActive("GERMAN")) errs.push({ type: "anki", stat: "GERMAN" });
+  if (hackAlertActive("PIANO")) errs.push({ type: "anki", stat: "PIANO" });
   return errs;
 }
 function checkAlert() {
@@ -743,15 +886,15 @@ function renderDaily() {
   const rows = document.querySelectorAll("#special-list .special-row");
   SPECIAL.forEach((s, i) => {
     if (s.max == null) return;
-    const c = counterOf(s.name);
+    const c = displayVal(s.name);
     s.val = c;
     const row = rows[i];
     if (!row) return;
     row.querySelector(".segbar").innerHTML = segBar(10, Math.round((c / s.max) * 10));
     row.querySelector(".val").textContent = c;
-    row.title = `${c} / ${s.max}`;
+    row.title = `Racha ${c} / ${s.max}`;
     row.classList.toggle("today", isGymDay(s.name));
-    row.classList.toggle("done", doneToday(s.name));
+    row.classList.toggle("done", doneToday(s.name) || isComplete(s));
   });
   updateDailyStatus();
   checkAlert();
@@ -759,7 +902,6 @@ function renderDaily() {
 
 /* ================= GYM (OBSIDIAN) ================= */
 const GYM_CACHE_KEY = "vt_gym_cache";
-const GYM_GROUP = { PUSH: "Push", PULL: "Pull", LEG: "Leg" };
 let gymData = loadGymCache();
 
 function loadGymCache() {
@@ -787,20 +929,31 @@ function fmtKg(v) {
 function renderDesc(s) {
   const el = document.getElementById("vault-boy-desc");
   const stage = document.querySelector(".vaultboy-stage");
+  const info = s.name === "GYM" ? todayGymInfo() : null;
   if (stage) {
-    stage.classList.toggle("gym", !!GYM_GROUP[s.name]);
-    stage.classList.toggle("cropb", s.name === "PULL" || s.name === "LEG");
+    stage.classList.toggle("gym", !!(info && info.group));
+    stage.classList.toggle("cropb", !!(info && info.cropb));
   }
-  if (GYM_GROUP[s.name]) { renderGymDesc(s); return; }
+  if (info) {
+    if (!info.group) { renderBreakDesc(s); return; }
+    renderGymDesc(s, info.group);
+    return;
+  }
+  if (s.name === "READ") { renderReadDesc(s); return; }
   el.innerHTML = `<span class="stat-name">${s.name}</span> — ${s.desc.toUpperCase()}`;
 }
 function applyGymToDesc() {
   const s = SPECIAL[currentSel];
-  if (s && GYM_GROUP[s.name]) renderGymDesc(s);
+  if (s && s.name === "GYM") renderDesc(s);
 }
-function renderGymDesc(s) {
+function renderBreakDesc(s) {
   const el = document.getElementById("vault-boy-desc");
-  const exs = (gymData && gymData[GYM_GROUP[s.name]]) || null;
+  el.innerHTML = `<span class="stat-name">${s.name}</span> — BREAK<br>`
+    + `<span class="gym-prog no-prog">HOY: DESCANSO — SIN RUTINA NI PUNTOS</span>`;
+}
+function renderGymDesc(s, group) {
+  const el = document.getElementById("vault-boy-desc");
+  const exs = (gymData && gymData[group]) || null;
   if (!exs) {
     el.innerHTML = `<span class="stat-name">${s.name}</span> — CARGANDO PROGRESIÓN GYM...`;
     return;
@@ -824,6 +977,89 @@ function renderGymDesc(s) {
   el.innerHTML = html;
 }
 
+/* ================= READ (OBSIDIAN: Read/Read.md) ================= */
+const READ_CACHE_KEY = "vt_read_cache";
+let readData = loadReadCache();
+
+function loadReadCache() {
+  try {
+    const d = JSON.parse(localStorage.getItem(READ_CACHE_KEY));
+    return (d && d.data) || null;
+  } catch (e) { return null; }
+}
+function saveReadCache(data) {
+  try { localStorage.setItem(READ_CACHE_KEY, JSON.stringify({ data: data, t: Date.now() })); } catch (e) { /* sin almacenamiento */ }
+}
+async function loadRead() {
+  try {
+    const r = await fetch("/api/read");
+    if (!r.ok) throw new Error("bad status");
+    readData = await r.json();
+    saveReadCache(readData);
+    applyReadToDesc();
+  } catch (e) { /* sin servidor: se usa la caché */ }
+}
+function applyReadToDesc() {
+  const s = SPECIAL[currentSel];
+  if (s && s.name === "READ") renderReadDesc(s);
+}
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function renderReadDesc(s) {
+  const el = document.getElementById("vault-boy-desc");
+  if (!readData) {
+    el.innerHTML = `<span class="stat-name">${s.name}</span> — CARGANDO LIBROS...`;
+    return;
+  }
+  const done = readData.done || [];
+  const progress = readData.progress || [];
+  let html = `<span class="stat-name">${s.name}</span> — LIBROS`;
+  html += `<div class="gym-list">`;
+  if (progress.length) {
+    html += `<div class="gym-name">EN PROGRESO</div>`;
+    for (const b of progress) html += readBookRow(b, false);
+  }
+  if (done.length) {
+    html += `<div class="gym-name">TERMINADOS</div>`;
+    for (const b of done) html += readBookRow(b, true);
+  }
+  if (!done.length && !progress.length) {
+    html += `<div class="gym-prog no-prog">— sin libros en Read/Read.md —</div>`;
+  }
+  html += `</div>`;
+  el.innerHTML = html;
+  el.querySelectorAll(".read-cb").forEach(btn => {
+    btn.addEventListener("click", () => toggleReadBook(btn.dataset.book));
+  });
+}
+function readBookRow(title, finished) {
+  const box = finished ? "[x]" : "[ ]";
+  return `<div class="gym-ex read-item"><button class="read-cb" data-book="${escHtml(title)}">${box}</button>`
+    + `<span class="gym-name read-title${finished ? " done" : ""}">${escHtml(title)}</span></div>`;
+}
+async function toggleReadBook(title) {
+  try {
+    const r = await fetch("/api/read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ book: title })
+    });
+    if (!r.ok) throw new Error("bad status");
+    readData = await r.json();
+    saveReadCache(readData);
+    renderReadDesc(SPECIAL.find(s => s.name === "READ"));
+    if ((readData.done || []).includes(title)) markReadDoneToday();
+  } catch (e) { /* sin servidor */ }
+}
+
+function markReadDoneToday() {
+  const s = SPECIAL.find(x => x.name === "READ");
+  if (!s || s.max == null) return;
+  if (doneToday(s.name) || isComplete(s)) return;
+  incrementStat(s);
+}
+
 /* ================= FX (solo glitch ambiental) ================= */
 function glitchBurst() {
   document.body.classList.add("vhs");
@@ -834,12 +1070,33 @@ function glitchBurst() {
 document.addEventListener("keydown", e => { if (e.key.toLowerCase() === "g") glitchBurst(); });
 setInterval(() => { if (Math.random() < 0.5) glitchBurst(); }, 11000);
 
+/* El domingo (BREAK) el día de descanso cuenta solo: +1 automático sin clic. */
+function autoGymRestDay() {
+  const stat = SPECIAL.find(s => s.name === "GYM");
+  if (!stat || todayGymInfo().group || doneToday(stat.name)) return;
+  if (isComplete(stat)) return;
+  daily.streaks = daily.streaks || {};
+  daily.done = daily.done || {};
+  const prev = streakOf(stat.name);
+  const n = streakLast(stat.name) === yestStr() ? prev + 1 : 1;
+  daily.streaks[stat.name] = { n, last: todayStr() };
+  daily.done[stat.name] = todayStr();
+  saveDaily();
+  renderDaily();
+  postPoints(stat.name, "inc").then(ok => { if (!ok) saveDaily(); });
+}
+
 buildSpecial();
 renderDaily();
 renderDesc(SPECIAL[currentSel]);
 const vbImg = document.getElementById("vault-boy-img");
-vbImg.src = SPECIAL[currentSel].img;
-vbImg.alt = `Vault Boy - ${SPECIAL[currentSel].name}`;
+const vbInfo = SPECIAL[currentSel].name === "GYM" ? todayGymInfo() : null;
+if (vbInfo && !vbInfo.group) {
+  vbImg.style.display = "none";
+} else {
+  vbImg.src = vbInfo ? vbInfo.img : SPECIAL[currentSel].img;
+  vbImg.alt = `Vault Boy - ${SPECIAL[currentSel].name}`;
+}
 document.getElementById("vault-boy-img").addEventListener("click", () => incrementStat(SPECIAL[currentSel]));
 document.getElementById("vault-boy-img").addEventListener("contextmenu", e => {
   e.preventDefault();
@@ -848,22 +1105,23 @@ document.getElementById("vault-boy-img").addEventListener("contextmenu", e => {
 applyAnkiCache();
 syncAnki();
 loadGym();
+loadRead();
 syncPointsFromServer();
 setInterval(syncAnki, 60000);
 setInterval(loadGym, 60000);
+setInterval(loadRead, 60000);
 setInterval(syncPointsFromServer, 60000);
 updateClickHint(SPECIAL[currentSel]);
 checkAlert();
+autoGymRestDay();
+// Refresco manual: el interruptor principal de actualización es el botón ⟳
+// (manualRefresh). El único recuerdo automático restante es el del descanso
+// dominical: si no se toca nada, el día de descanso de GYM igual se suma solo.
 setInterval(() => {
-  renderDaily();
-  updateClickHint(SPECIAL[currentSel]);
-}, 30000);
-// Auto-reparación del overlay ERROR: si algo lo dejó caído (p. ej. el hider de
-// Anki murió) mientras el modo alerta sigue activo, se re-emite el estado para
-// que serve.py vuelva a abrir el overlay y resucite el hider.
-setInterval(() => {
-  if (document.body.classList.contains("alert")) postAlertState();
-}, 30000);
+  autoGymRestDay();
+}, 60000);
+const refreshBtn = document.getElementById("refresh-btn");
+if (refreshBtn) refreshBtn.addEventListener("click", manualRefresh);
 </script>
 </body>
 </html>

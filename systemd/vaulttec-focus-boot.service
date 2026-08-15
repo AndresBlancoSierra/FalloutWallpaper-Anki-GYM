@@ -1,0 +1,30 @@
+# VAULT-TEC FOCUS — re-aplica el bloqueo al arrancar (servicio de SISTEMA).
+#
+# En cada boot ejecuta scripts/focus-net.sh boot: si mode.state == RED aplica
+# el bloqueo de distracciones (dropin resolved -> AdGuard + user_rules de la
+# blocklist + refresh) y si no lo desactiva. Idempotente y seguro en ambos
+# sentidos. El usuario retiró la opción de arrancar siempre abierto.
+
+[Unit]
+Description=VAULT-TEC focus: aplica modo ERROR de internet al arrancar
+Documentation=file://__REPO__/docs/USAGE.md
+After=adguardhome.service network-online.target
+Wants=network-online.target
+# Sin límite de reintentos: si AdGuard aún no está listo, systemd reintenta
+# cada RestartSec hasta que el boot consiga aplicar el bloqueo.
+StartLimitIntervalSec=0
+StartLimitBurst=INFINITY
+
+[Service]
+Type=oneshot
+Environment=HOME=__HOME__
+# focus-net.sh boot espera a AdGuard hasta FOCUS_BOOT_TIMEOUT (30 s); si el
+# servicio sigue caído, el boot falla y systemd lo reintenta cada 10 s sin
+# límite hasta que AdGuard esté listo y se aplique el bloqueo.
+Restart=on-failure
+RestartSec=10
+ExecStart=/bin/bash __REPO__/scripts/focus-net.sh boot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
