@@ -190,6 +190,24 @@ p { line-height: 1.45; margin: .4rem 0; }
 .vaultboy-stage.gym img { height: 224px; width: 100%; object-fit: cover; object-position: center bottom; }
 .vaultboy-stage.gym.cropb { min-height: 168px; }
 .vaultboy-stage.gym.cropb img { object-position: center 70%; width: 210px; height: 168px; }
+
+/* ================= CASILLAS HACKERMAN (decks diarios) ================= */
+#hack-boxes {
+  position: absolute; top: .4rem; right: .4rem; z-index: 2;
+  display: none; flex-wrap: wrap; justify-content: flex-end;
+  gap: .35rem; max-width: 118px;
+}
+.vaultboy-stage.hack #hack-boxes { display: flex; }
+.hack-box {
+  width: 56px; background: rgba(0,0,0,0.80); border: 1px solid var(--line-strong);
+  text-align: center; padding: .18rem .2rem .12rem;
+}
+.hack-box img { width: 32px; height: 24px; object-fit: contain; display: block; margin: 0 auto; }
+.hack-box .cnt { display: block; font-size: .72rem; margin-top: .12rem; color: var(--phosphor); }
+.hack-box.ok { border-color: #39ff14; box-shadow: 0 0 7px rgba(57,255,20,0.7); }
+.hack-box.ok .cnt { color: #39ff14; text-shadow: 0 0 4px rgba(57,255,20,0.6); }
+.hack-box.bad { border-color: rgba(255,60,60,0.85); box-shadow: 0 0 7px rgba(255,60,60,0.55); }
+.hack-box.bad .cnt { color: #ff6060; text-shadow: 0 0 4px rgba(255,60,60,0.6); }
 .hint { margin-top: .4rem; font-size: .95rem; }
 .hint.ok { color: #fff; text-shadow: 0 0 6px var(--glow-bright); }
 .hint.deny { color: #ff6060; text-shadow: 0 0 6px rgba(255,60,60,0.7); }
@@ -359,6 +377,7 @@ body.alert #err-word {
         <div class="vaultboy-box">
           <div class="vaultboy-stage">
             <img id="vault-boy-img" src="img/special/Strength.png" alt="Vault Boy - Strength">
+            <div id="hack-boxes"></div>
           </div>
           <div id="vault-boy-desc" class="vaultboy-desc">
             <span class="stat-name">GYM</span> — RUTINA DEL DÍA: EMPUJE, TRACCIÓN O PIERNAS SEGÚN EL DÍA; DESCANSO LOS DOMINGOS.
@@ -435,6 +454,9 @@ function selectStat(i) {
   }, 120);
   renderDesc(s);
   updateClickHint(s);
+  const stage = document.querySelector(".vaultboy-stage");
+  if (stage) stage.classList.toggle("hack", s.name === "HACKERMAN");
+  if (s.name === "HACKERMAN") renderHackBoxes();
 }
 
 function segBar(count, filled, cls) {
@@ -470,8 +492,22 @@ const DECK_SYNC = [
   { stat: "PIANO", deck: "Piano", label: "tarjetas" }
 ];
 // Meta diaria de Anki: hoy deben responderse AL MENOS esta cantidad de tarjetas
-// (rated:1) para que el día cuente como completado.
+// (rated:1) para que el día cuente como completado (GERMAN/PIANO).
 const ANKI_MIN_DELTA = 10;
+// HACKERMAN se desglosa por deck; cada deck tiene su propia meta diaria y su
+// casilla (logo + cuenta). La categoría completa solo cuando TODAS las casillas
+// están verdes. `kw` se matchea contra un subdeck directo de Hackerman o contra
+// un mazo a nivel raíz (cubre antes y después de fusionar SQL/PYTHON en Anki).
+const HACKERMAN_PARENT = "Hackerman";
+const HACKERMAN_CHILDREN = [
+  { key: "AWS",  kw: "aws",      quota: 10, logo: "img/hack/aws.png" },
+  { key: "CCNA", kw: "ccna",     quota: 5,  logo: "img/hack/ccna.png" },
+  { key: "LFCS", kw: "lfcs",     quota: 5,  logo: "img/hack/lfcs.webp" },
+  { key: "SEC+", kw: "security", quota: 5,  logo: "img/hack/secplus.png" },
+  { key: "SQL",  kw: "sql",      quota: 5,  logo: "img/hack/sql.png" },
+  { key: "PY",   kw: "python",   quota: 5,  logo: "img/hack/python.webp" }
+];
+const HACKERMAN_QUOTA_TOTAL = HACKERMAN_CHILDREN.reduce((a, c) => a + c.quota, 0);
 
 async function anki(action, params) {
   const res = await fetch(ANKI_URL, {
@@ -550,14 +586,21 @@ async function syncAnki() {
       const ids = await anki("findCards", { query: `deck:${match}` });
       const total = ids.length;
       const learned = total > 0 ? await chunkCardInfo(ids) : 0;
-      // Meta del día: cartas RESPONDIDAS hoy (rated:1). En esta instalación
-      // `introduced:1` no registra las nuevas estudiadas por custom study en el
-      // celular (verificado: 5 nuevas estrenadas hoy daban introduced:1=0) y a
-      // veces cuenta cartas nunca estudiadas; rated:1 coincide con la actividad
-      // real del día (revlog). El total acumulado fluctúa al importar/borrar
-      // tarjetas, así que compararlo entre días da deltas falsos.
-      const newIds = await anki("findCards", { query: `deck:${match} rated:1` });
-      updateSyncedRow(cfg.stat, learned, total, newIds.length);
+      if (cfg.stat === "HACKERMAN") {
+        // Meta diaria por deck (casillas): cada hijo se consulta con rated:1 y
+        // se guarda en el historial como HACKERMAN::<KEY>.
+        await syncHackChildren(decks);
+        updateSyncedRow(cfg.stat, learned, total, todayHackTotal());
+      } else {
+        // Meta del día: cartas RESPONDIDAS hoy (rated:1). En esta instalación
+        // `introduced:1` no registra las nuevas estudiadas por custom study en el
+        // celular (verificado: 5 nuevas estrenadas hoy daban introduced:1=0) y a
+        // veces cuenta cartas nunca estudiadas; rated:1 coincide con la actividad
+        // real del día (revlog). El total acumulado fluctúa al importar/borrar
+        // tarjetas, así que compararlo entre días da deltas falsos.
+        const newIds = await anki("findCards", { query: `deck:${match} rated:1` });
+        updateSyncedRow(cfg.stat, learned, total, newIds.length);
+      }
     }
   } catch (e) {
     /* Anki sin conexión: se muestran los valores de la caché */
@@ -697,10 +740,14 @@ function updateAnkiStatus(s) {
     if (c.total != null) {
       const pct = c.total > 0 ? Math.round(100 * (c.learned || 0) / c.total) : 0;
       text = `${s.name}: ${c.learned || 0} / ${c.total} (${pct}%)`;
-      const h = loadHackHistory()[s.name] || {};
-      const done = h[todayStr()] || 0;
-      const need = Math.max(0, ANKI_MIN_DELTA - done);
-      text += need > 0 ? ` — faltan ${need} tarjetas para ${ANKI_MIN_DELTA}` : ` — meta ${ANKI_MIN_DELTA} ✓`;
+      if (s.name === "HACKERMAN") {
+        const need = hackMissingTotal();
+        text += need > 0 ? ` — faltan ${need} para ${HACKERMAN_QUOTA_TOTAL}` : ` — meta ${HACKERMAN_QUOTA_TOTAL} ✓`;
+      } else {
+        const done = (loadHackHistory()[s.name] || {})[todayStr()] || 0;
+        const need = Math.max(0, ANKI_MIN_DELTA - done);
+        text += need > 0 ? ` — faltan ${need} tarjetas para ${ANKI_MIN_DELTA}` : ` — meta ${ANKI_MIN_DELTA} ✓`;
+      }
     }
   }
   el.textContent = text;
@@ -813,15 +860,14 @@ function todayGymStat() { return GYM_DAYS[new Date().getDay()]; }
 
 const HACK_KEY = "vt_hack_streak";
 const HACK_V_KEY = "vt_hack_v";
-// v3 de la meta Anki: se cuentan cartas RESPONDIDAS por día (rated:1), no el
-// total acumulado. v2 usaba introduced:1, pero en esta instalación no registra
-// las nuevas de custom study / celular (verificado con 5 nuevas el mismo día).
-// El historial viejo quedó contaminado (snapshots inflados por la caché y por
-// un mazo que crece/encoge); se descarta UNA vez.
+// v4 de la meta Anki: HACKERMAN se desglosa por deck (claves HACKERMAN::AWS,
+// HACKERMAN::CCNA, ...) con cuota diaria propia; GERMAN/PIANO siguen con su
+// cuenta simple por día. El historial v3 no es compatible (estructura distinta)
+// y se descarta UNA vez.
 (function migrateHackHistory() {
-  if (localStorage.getItem(HACK_V_KEY) === "3") return;
+  if (localStorage.getItem(HACK_V_KEY) === "4") return;
   try { localStorage.removeItem(HACK_KEY); } catch (e) {}
-  try { localStorage.setItem(HACK_V_KEY, "3"); } catch (e) {}
+  try { localStorage.setItem(HACK_V_KEY, "4"); } catch (e) {}
 })();
 function loadHackHistory() {
   try { return JSON.parse(localStorage.getItem(HACK_KEY)) || {}; } catch (e) { return {}; }
@@ -835,7 +881,66 @@ function recordHackSnapshot(stat, learned) {
   h[stat][todayStr()] = Math.max(h[stat][todayStr()] || 0, learned);
   saveHackHistory(h);
 }
+
+/* ================= DESGLOSE HACKERMAN POR DECK ================= */
+function childStatKey(key) { return "HACKERMAN::" + key; }
+function findHackChild(decks, child) {
+  const kw = child.kw.toLowerCase();
+  const parent = HACKERMAN_PARENT.toLowerCase();
+  const direct = decks.find(d => {
+    const dl = d.toLowerCase();
+    if (!dl.startsWith(parent + "::")) return false;
+    const rest = dl.slice(parent.length + 2);
+    if (rest.includes("::")) return false; // sub-subdeck, no es un hijo directo
+    return rest.includes(kw);
+  });
+  if (direct) return direct;
+  // Fallback pre-fusión: mazo a nivel raíz que contenga la palabra clave.
+  return decks.find(d => {
+    const dl = d.toLowerCase();
+    return dl !== parent && !dl.startsWith(parent + "::") && dl.includes(kw);
+  });
+}
+function hackChildRated(child) {
+  const h = loadHackHistory();
+  return (h[childStatKey(child.key)] || {})[todayStr()] || 0;
+}
+function hackChildOk(child) { return hackChildRated(child) >= child.quota; }
+function hackMissing(child) { return Math.max(0, child.quota - hackChildRated(child)); }
+function hackMissingTotal() { return HACKERMAN_CHILDREN.reduce((a, c) => a + hackMissing(c), 0); }
+function todayHackTotal() {
+  return HACKERMAN_CHILDREN.reduce((a, c) => a + hackChildRated(c), 0);
+}
+async function syncHackChildren(decks) {
+  for (const child of HACKERMAN_CHILDREN) {
+    const match = findHackChild(decks, child);
+    if (!match) {
+      recordHackSnapshot(childStatKey(child.key), 0);
+      cacheAnki(childStatKey(child.key), 0, 0, 0);
+      continue;
+    }
+    const ratedIds = await anki("findCards", { query: `deck:${match} rated:1` });
+    recordHackSnapshot(childStatKey(child.key), ratedIds.length);
+    cacheAnki(childStatKey(child.key), 0, 0, ratedIds.length);
+  }
+  renderHackBoxes();
+}
+function renderHackBoxes() {
+  const wrap = document.getElementById("hack-boxes");
+  if (!wrap) return;
+  wrap.innerHTML = HACKERMAN_CHILDREN.map(c => {
+    const rated = hackChildRated(c);
+    return `<div class="hack-box ${hackChildOk(c) ? "ok" : "bad"}" title="${c.key} ${rated}/${c.quota}">
+      <img src="${c.logo}" alt="${c.key}">
+      <span class="cnt">${rated}/${c.quota}</span>
+    </div>`;
+  }).join("");
+}
 function hackAlertActive(stat) {
+  if (stat === "HACKERMAN") {
+    // Meta: TODAS las casillas de deck verdes (cada una con su cuota rated:1).
+    return HACKERMAN_CHILDREN.some(child => !hackChildOk(child));
+  }
   // Meta: al menos ANKI_MIN_DELTA tarjetas RESPONDIDAS HOY.
   // Sin comparación con ayer: el total acumulado es poco fiable.
   const h = loadHackHistory()[stat] || {};
@@ -868,7 +973,10 @@ function checkAlert() {
   if (sub) {
     sub.innerHTML = errs.map(e => e.type === "daily"
       ? `<span class="err-line">HOY: ${e.stat} — SIN COMPLETAR</span>`
-      : `<span class="err-line">${e.stat} — SIN PROGRESO HOY</span>`).join("");
+      : e.stat === "HACKERMAN"
+        ? HACKERMAN_CHILDREN.filter(c => !hackChildOk(c))
+            .map(c => `<span class="err-line">${c.key} — ${hackChildRated(c)}/${c.quota}</span>`).join("")
+        : `<span class="err-line">${e.stat} — SIN PROGRESO HOY</span>`).join("");
   }
 }
 
