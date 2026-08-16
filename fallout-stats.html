@@ -428,8 +428,8 @@ const SPECIAL = [
     desc: "Ducha fría diaria: constancia, aguante y claridad mental." },
   { letter: "R", name: "READ", val: 0, max: 365, img: "img/special/Perception.png",
     desc: "Lectura diaria: libros terminados y en progreso." },
-  { letter: "E", name: "GERMAN", val: 0, img: "img/special/Intelligence.png",
-    desc: "Repaso diario de alemán: tarjetas, vocabulario y constancia." },
+  { letter: "E", name: "LANGUAGES", val: 0, img: "img/special/Intelligence.png",
+    desc: "Repaso diario de idiomas: alemán (≥10) e inglés (≥5)." },
   { letter: "H", name: "HACKERMAN", val: 0, img: "img/perks/Fo4_Hacker.png",
     desc: "Nivel técnico: retos, scripts y aprendizaje de código y hacking." },
   { letter: "P", name: "PIANO", val: 0, img: "img/special/Charisma.png",
@@ -457,8 +457,9 @@ function selectStat(i) {
   renderDesc(s);
   updateClickHint(s);
   const stage = document.querySelector(".vaultboy-stage");
-  if (stage) stage.classList.toggle("hack", s.name === "HACKERMAN");
+  if (stage) stage.classList.toggle("hack", s.name === "HACKERMAN" || s.name === "LANGUAGES");
   if (s.name === "HACKERMAN") renderHackBoxes();
+  if (s.name === "LANGUAGES") renderLangBoxes();
 }
 
 function segBar(count, filled, cls) {
@@ -489,12 +490,12 @@ function buildSpecial() {
 /* ================= SINCRONIZACIÓN ANKICONNECT ================= */
 const ANKI_URL = "http://127.0.0.1:8765";
 const DECK_SYNC = [
-  { stat: "GERMAN", keywords: ["1000", "refold", "deutsch", "deutch"], label: "palabras" },
+  { stat: "LANGUAGES", deck: "Languages", label: "tarjetas" },
   { stat: "HACKERMAN", deck: "Hackerman", label: "tarjetas" },
   { stat: "PIANO", deck: "Piano", label: "tarjetas" }
 ];
 // Meta diaria de Anki: hoy deben responderse AL MENOS esta cantidad de tarjetas
-// (rated:1) para que el día cuente como completado (GERMAN/PIANO).
+// (rated:1) para que el día cuente como completado (LANGUAGES/PIANO).
 const ANKI_MIN_DELTA = 10;
 // HACKERMAN se desglosa por deck; cada deck tiene su propia meta diaria y su
 // casilla (logo + cuenta). La categoría completa solo cuando TODAS las casillas
@@ -510,6 +511,13 @@ const HACKERMAN_CHILDREN = [
   { key: "PY",   kw: "python",   quota: 5,  logo: "img/hack/python.webp" }
 ];
 const HACKERMAN_QUOTA_TOTAL = HACKERMAN_CHILDREN.reduce((a, c) => a + c.quota, 0);
+// LANGUAGES se desglosa igual que HACKERMAN: casillas por idioma con bandera.
+const LANGUAGES_PARENT = "Languages";
+const LANGUAGES_CHILDREN = [
+  { key: "DE", kw: "deutsch", quota: 10, logo: "img/lang/de.png" },
+  { key: "EN", kw: "english", quota: 5,  logo: "img/lang/us.png" }
+];
+const LANGUAGES_QUOTA_TOTAL = LANGUAGES_CHILDREN.reduce((a, c) => a + c.quota, 0);
 
 async function anki(action, params) {
   const res = await fetch(ANKI_URL, {
@@ -588,11 +596,16 @@ async function syncAnki() {
       const ids = await anki("findCards", { query: `deck:${match}` });
       const total = ids.length;
       const learned = total > 0 ? await chunkCardInfo(ids) : 0;
-      if (cfg.stat === "HACKERMAN") {
+      if (cfg.stat === "HACKERMAN" || cfg.stat === "LANGUAGES") {
         // Meta diaria por deck (casillas): cada hijo se consulta con rated:1 y
-        // se guarda en el historial como HACKERMAN::<KEY>.
-        await syncHackChildren(decks);
-        updateSyncedRow(cfg.stat, learned, total, todayHackTotal());
+        // se guarda en el historial como <STAT>::<KEY>.
+        if (cfg.stat === "HACKERMAN") {
+          await syncHackChildren(decks);
+          updateSyncedRow(cfg.stat, learned, total, todayHackTotal());
+        } else {
+          await syncLangChildren(decks);
+          updateSyncedRow(cfg.stat, learned, total, todayLangTotal());
+        }
       } else {
         // Meta del día: cartas RESPONDIDAS hoy (rated:1). En esta instalación
         // `introduced:1` no registra las nuevas estudiadas por custom study en el
@@ -702,7 +715,7 @@ function streakLast(stat) {
 }
 /* Racha "efectiva": el valor guardado vale mientras el último día hecho sea
    hoy o ayer. Si pasó un día completo sin hacer la actividad, se reinicia (0).
-   GERMAN/HACKERMAN/PIANO (max==null) no usan rachas. */
+   LANGUAGES/HACKERMAN/PIANO (max==null) no usan rachas. */
 function effectiveStreak(stat) {
   const last = streakLast(stat);
   if (last !== todayStr() && last !== yestStr()) return 0;
@@ -745,6 +758,9 @@ function updateAnkiStatus(s) {
       if (s.name === "HACKERMAN") {
         const need = hackMissingTotal();
         text += need > 0 ? ` — faltan ${need} para ${HACKERMAN_QUOTA_TOTAL}` : ` — meta ${HACKERMAN_QUOTA_TOTAL} ✓`;
+      } else if (s.name === "LANGUAGES") {
+        const need = langMissingTotal();
+        text += need > 0 ? ` — faltan ${need} para ${LANGUAGES_QUOTA_TOTAL}` : ` — meta ${LANGUAGES_QUOTA_TOTAL} ✓`;
       } else {
         const done = (loadHackHistory()[s.name] || {})[todayStr()] || 0;
         const need = Math.max(0, ANKI_MIN_DELTA - done);
@@ -862,14 +878,13 @@ function todayGymStat() { return GYM_DAYS[new Date().getDay()]; }
 
 const HACK_KEY = "vt_hack_streak";
 const HACK_V_KEY = "vt_hack_v";
-// v4 de la meta Anki: HACKERMAN se desglosa por deck (claves HACKERMAN::AWS,
-// HACKERMAN::CCNA, ...) con cuota diaria propia; GERMAN/PIANO siguen con su
-// cuenta simple por día. El historial v3 no es compatible (estructura distinta)
-// y se descarta UNA vez.
+// v5 de la meta Anki: GERMAN pasó a LANGUAGES (desglose por idioma con claves
+// LANGUAGES::DE, LANGUAGES::EN, cuota propia). El historial v4 no es compatible
+// (clave GERMAN obsoleta) y se descarta UNA vez.
 (function migrateHackHistory() {
-  if (localStorage.getItem(HACK_V_KEY) === "4") return;
+  if (localStorage.getItem(HACK_V_KEY) === "5") return;
   try { localStorage.removeItem(HACK_KEY); } catch (e) {}
-  try { localStorage.setItem(HACK_V_KEY, "4"); } catch (e) {}
+  try { localStorage.setItem(HACK_V_KEY, "5"); } catch (e) {}
 })();
 function loadHackHistory() {
   try { return JSON.parse(localStorage.getItem(HACK_KEY)) || {}; } catch (e) { return {}; }
@@ -938,10 +953,69 @@ function renderHackBoxes() {
     </div>`;
   }).join("");
 }
+
+/* ================= DESGLOSE LANGUAGES POR IDIOMA ================= */
+function langStatKey(key) { return "LANGUAGES::" + key; }
+function findLangChild(decks, child) {
+  const kw = child.kw.toLowerCase();
+  const parent = LANGUAGES_PARENT.toLowerCase();
+  const direct = decks.find(d => {
+    const dl = d.toLowerCase();
+    if (!dl.startsWith(parent + "::")) return false;
+    const rest = dl.slice(parent.length + 2);
+    if (rest.includes("::")) return false; // sub-subdeck, no es un hijo directo
+    return rest.includes(kw);
+  });
+  if (direct) return direct;
+  // Fallback pre-fusión: mazo a nivel raíz que contenga la palabra clave.
+  return decks.find(d => {
+    const dl = d.toLowerCase();
+    return dl !== parent && !dl.startsWith(parent + "::") && dl.includes(kw);
+  });
+}
+function langChildRated(child) {
+  const h = loadHackHistory();
+  return (h[langStatKey(child.key)] || {})[todayStr()] || 0;
+}
+function langChildOk(child) { return langChildRated(child) >= child.quota; }
+function langMissing(child) { return Math.max(0, child.quota - langChildRated(child)); }
+function langMissingTotal() { return LANGUAGES_CHILDREN.reduce((a, c) => a + langMissing(c), 0); }
+function todayLangTotal() {
+  return LANGUAGES_CHILDREN.reduce((a, c) => a + langChildRated(c), 0);
+}
+async function syncLangChildren(decks) {
+  for (const child of LANGUAGES_CHILDREN) {
+    const match = findLangChild(decks, child);
+    if (!match) {
+      recordHackSnapshot(langStatKey(child.key), 0);
+      cacheAnki(langStatKey(child.key), 0, 0, 0);
+      continue;
+    }
+    const ratedIds = await anki("findCards", { query: `deck:${match} rated:1` });
+    recordHackSnapshot(langStatKey(child.key), ratedIds.length);
+    cacheAnki(langStatKey(child.key), 0, 0, ratedIds.length);
+  }
+  renderLangBoxes();
+}
+function renderLangBoxes() {
+  const wrap = document.getElementById("hack-boxes");
+  if (!wrap) return;
+  wrap.innerHTML = LANGUAGES_CHILDREN.map(c => {
+    const rated = langChildRated(c);
+    return `<div class="hack-box ${langChildOk(c) ? "ok" : "bad"}" title="${c.key} ${rated}/${c.quota}">
+      <img src="${c.logo}" alt="${c.key}">
+      <span class="cnt">${rated}/${c.quota}</span>
+    </div>`;
+  }).join("");
+}
 function hackAlertActive(stat) {
   if (stat === "HACKERMAN") {
     // Meta: TODAS las casillas de deck verdes (cada una con su cuota rated:1).
     return HACKERMAN_CHILDREN.some(child => !hackChildOk(child));
+  }
+  if (stat === "LANGUAGES") {
+    // Meta: TODAS las casillas de idioma verdes (DE ≥10, EN ≥5).
+    return LANGUAGES_CHILDREN.some(child => !langChildOk(child));
   }
   // Meta: al menos ANKI_MIN_DELTA tarjetas RESPONDIDAS HOY.
   // Sin comparación con ayer: el total acumulado es poco fiable.
@@ -957,7 +1031,7 @@ function activeErrors() {
     if (!doneToday(s.name)) errs.push({ type: "daily", stat: s.name });
   }
   if (hackAlertActive("HACKERMAN")) errs.push({ type: "anki", stat: "HACKERMAN" });
-  if (hackAlertActive("GERMAN")) errs.push({ type: "anki", stat: "GERMAN" });
+  if (hackAlertActive("LANGUAGES")) errs.push({ type: "anki", stat: "LANGUAGES" });
   if (hackAlertActive("PIANO")) errs.push({ type: "anki", stat: "PIANO" });
   return errs;
 }
@@ -978,7 +1052,10 @@ function checkAlert() {
       : e.stat === "HACKERMAN"
         ? HACKERMAN_CHILDREN.filter(c => !hackChildOk(c))
             .map(c => `<span class="err-line">${c.key} — SIN COMPLETAR</span>`).join("")
-        : `<span class="err-line">${e.stat} — SIN PROGRESO HOY</span>`).join("");
+        : e.stat === "LANGUAGES"
+          ? LANGUAGES_CHILDREN.filter(c => !langChildOk(c))
+              .map(c => `<span class="err-line">${c.key} — SIN COMPLETAR</span>`).join("")
+          : `<span class="err-line">${e.stat} — SIN PROGRESO HOY</span>`).join("");
   }
 }
 
