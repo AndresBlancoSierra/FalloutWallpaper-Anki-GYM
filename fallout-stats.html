@@ -193,17 +193,19 @@ p { line-height: 1.45; margin: .4rem 0; }
 
 /* ================= CASILLAS HACKERMAN (decks diarios) ================= */
 #hack-boxes {
-  position: absolute; top: .4rem; right: .4rem; z-index: 2;
-  display: none; flex-wrap: wrap; justify-content: flex-end;
-  gap: .35rem; max-width: 118px;
+  position: absolute; left: 0; right: 0; bottom: .4rem; z-index: 2;
+  display: none; flex-wrap: nowrap; justify-content: center;
+  gap: .4rem;
 }
 .vaultboy-stage.hack #hack-boxes { display: flex; }
+/* Espacio inferior para que la fila de casillas no tape al vault boy. */
+.vaultboy-stage.hack { padding-bottom: 58px; }
 .hack-box {
-  width: 56px; background: rgba(0,0,0,0.80); border: 1px solid var(--line-strong);
-  text-align: center; padding: .18rem .2rem .12rem;
+  width: 52px; background: rgba(0,0,0,0.80); border: 1px solid var(--line-strong);
+  text-align: center; padding: .14rem .18rem .1rem;
 }
-.hack-box img { width: 32px; height: 24px; object-fit: contain; display: block; margin: 0 auto; }
-.hack-box .cnt { display: block; font-size: .72rem; margin-top: .12rem; color: var(--phosphor); }
+.hack-box img { width: 30px; height: 20px; object-fit: contain; display: block; margin: 0 auto; }
+.hack-box .cnt { display: block; font-size: .7rem; margin-top: .08rem; color: var(--phosphor); }
 .hack-box.ok { border-color: #39ff14; box-shadow: 0 0 7px rgba(57,255,20,0.7); }
 .hack-box.ok .cnt { color: #39ff14; text-shadow: 0 0 4px rgba(57,255,20,0.6); }
 .hack-box.bad { border-color: rgba(255,60,60,0.85); box-shadow: 0 0 7px rgba(255,60,60,0.55); }
