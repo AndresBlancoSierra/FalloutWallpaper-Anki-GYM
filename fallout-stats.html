@@ -977,7 +977,7 @@ function checkAlert() {
       ? `<span class="err-line">HOY: ${e.stat} — SIN COMPLETAR</span>`
       : e.stat === "HACKERMAN"
         ? HACKERMAN_CHILDREN.filter(c => !hackChildOk(c))
-            .map(c => `<span class="err-line">${c.key} — ${hackChildRated(c)}/${c.quota}</span>`).join("")
+            .map(c => `<span class="err-line">${c.key} — SIN COMPLETAR</span>`).join("")
         : `<span class="err-line">${e.stat} — SIN PROGRESO HOY</span>`).join("");
   }
 }
