@@ -130,21 +130,15 @@ apply_restarts() {
 }
 
 # eww con :passthrough (build custom); el daemon se levanta on-demand.
+# EWW_ENABLED=0 desactiva el overlay de ERROR (eww) sin tocar el tema rojo.
+# Poner a 1 para reactivarlo.
+EWW_ENABLED=0
 EWW_BIN="$HOME/.local/bin/eww"
 ANKI_HIDER="$HOME/.local/bin/fallout-anki-hider.sh"
-FOCUS_NET="$HOME/.local/bin/focus-net.sh"
 
 errormode_on() {
-  # Bloqueo de distracciones (AdGuard + dropin resolved, ver docs/FOCUS.md):
-  # mientras el modo ERROR esté activo se bloquea solo la blocklist
-  # (adguard/blocklist.txt); todo lo demás pasa. fail-closed: si AdGuard cae,
-  # el DNS cae y systemd lo relanza en ~10 s.
-  if [ -x "$FOCUS_NET" ]; then
-    bash "$FOCUS_NET" on
-  else
-    echo "[fallout] aviso: falta $FOCUS_NET (setup/install.sh)"
-  fi
   [ -x "$EWW_BIN" ] || return 0
+  [ "${EWW_ENABLED:-1}" = "1" ] || return 0
   pgrep -x eww >/dev/null 2>&1 || { nohup "$EWW_BIN" daemon >/dev/null 2>&1 & sleep 0.5; }
   "$EWW_BIN" open errormode 2>/dev/null || true
   # Excepción de Anki: mientras Anki esté abierto, oculta el overlay para que
@@ -155,10 +149,8 @@ errormode_on() {
 }
 
 errormode_off() {
-  if [ -x "$FOCUS_NET" ]; then
-    bash "$FOCUS_NET" off
-  fi
   [ -x "$EWW_BIN" ] || return 0
+  [ "${EWW_ENABLED:-1}" = "1" ] || return 0
   pgrep -x eww >/dev/null 2>&1 || return 0
   pgrep -f "[f]allout-anki-hider.sh" >/dev/null 2>&1 && pkill -f "[f]allout-anki-hider.sh" >/dev/null 2>&1 || true
   "$EWW_BIN" close errormode 2>/dev/null || true

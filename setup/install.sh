@@ -106,78 +106,11 @@ fi
 
 # 2) Scripts -> ~/.local/bin
 mkdir -p "$HOME_BIN"
-for s in fallout-alert-mode.sh fallout-anki-hider.sh fallout-wallpaper-toggle.sh \
-         focus-net.sh focus-refresh.sh; do
+for s in fallout-alert-mode.sh fallout-anki-hider.sh fallout-wallpaper-toggle.sh; do
   ln -sfn "$REPO/scripts/$s" "$HOME_BIN/$s"
   chmod +x "$REPO/scripts/$s" 2>/dev/null || true
   log "script ${s} -> $HOME_BIN/${s}"
 done
-
-# 2b) FOCUS — bloqueo de distracciones en modo ERROR (AdGuard, ver docs/FOCUS.md).
-#     Idempotente: re-ejecutable sin romper nada.
-FOCUS_BASE="$HOME/.config/fallout-wallpaper"
-mkdir -p "$FOCUS_BASE"
-
-if ! paclist adguardhome; then
-  if [ -z "$DRY" ]; then
-    log "instalando adguardhome (pacman)..."
-    sudo pacman -S --needed --noconfirm adguardhome
-  else
-    warn "falta el paquete adguardhome (instálalo con pacman)."
-  fi
-fi
-if [ -z "$DRY" ]; then
-  sudo systemctl enable --now adguardhome >/dev/null 2>&1 || warn "adguardhome no arrancó; revisa: journalctl -u adguardhome"
-fi
-
-ADG_CREDS="$FOCUS_BASE/adguard.creds"
-ADG_PORT=3015
-# Configura AdGuard por API solo si aún no está configurado (estado != 200).
-configure_adguard() {
-  if [ -r "$ADG_CREDS" ] && curl -s -o /dev/null -w '%{http_code}' \
-       -u "$(cat "$ADG_CREDS")" "http://127.0.0.1:$ADG_PORT/control/status" \
-       | grep -q '^200$'; then
-    log "AdGuard ya configurado (se reutilizan credenciales de $ADG_CREDS)."
-    return 0
-  fi
-  log "configurando AdGuard por API (web 127.0.0.1:$ADG_PORT, DNS 127.0.0.1:53)..."
-  ADG_PASS="$(python3 -c 'import secrets; print(secrets.token_hex(12))')"
-  sleep 2   # esperar a que el servicio levante
-  curl -s -o /dev/null -w '%{http_code}\n' \
-    -H 'Content-Type: application/json' -X POST \
-    "http://127.0.0.1:$ADG_PORT/control/install/configure" \
-    -d "{\"web\":{\"ip\":\"127.0.0.1\",\"port\":$ADG_PORT,\"username\":\"admin\",\"password\":\"$ADG_PASS\"},\"dns\":{\"ip\":\"127.0.0.1\",\"port\":53}}"
-  printf 'admin:%s\n' "$ADG_PASS" > "$ADG_CREDS"
-  chmod 600 "$ADG_CREDS"
-  # Upstream: NextDNS DoH (perfil 4c2f5c) + bootstrap. POST-only en /control/dns_config.
-  curl -s -o /dev/null -u "admin:$ADG_PASS" -H 'Content-Type: application/json' \
-    -X POST "http://127.0.0.1:$ADG_PORT/control/dns_config" \
-    -d '{"upstream_dns":["https://dns.nextdns.io/4c2f5c"],"bootstrap_dns":["94.140.14.14","8.8.8.8"]}'
-  log "AdGuard listo (creds: $ADG_CREDS)."
-}
-if [ -z "$DRY" ]; then
-  configure_adguard || warn "la configuración de AdGuard falló; revisa adguardhome.service"
-fi
-
-# 2c) FOCUS — servicios de sistema (root): re-aplicar en boot + refrescar IPs +
-#     AdGuard auto-reinicio (Restart=always). Se sustituyen __REPO__/__HOME__.
-deploy_unit() { # deploy_unit <archivo-en-repo> <ruta-destino>
-  local src="$REPO/systemd/$1" dst="$2" body
-  body="$(sed -e "s|__REPO__|$REPO|g" -e "s|__HOME__|$HOME|g" "$src")"
-  printf '%s\n' "$body" | sudo tee "$dst" >/dev/null
-  log "unit ${1} -> ${dst}"
-}
-if [ -z "$DRY" ]; then
-  deploy_unit vaulttec-focus-refresh.service /etc/systemd/system/vaulttec-focus-refresh.service
-  deploy_unit vaulttec-focus-boot.service /etc/systemd/system/vaulttec-focus-boot.service
-  sudo mkdir -p /etc/systemd/system/adguardhome.service.d
-  deploy_unit adguardhome.service.d/override.conf /etc/systemd/system/adguardhome.service.d/override.conf
-  sudo systemctl daemon-reload
-  sudo systemctl enable vaulttec-focus-refresh.service vaulttec-focus-boot.service >/dev/null
-  log "units habilitadas: vaulttec-focus-refresh, vaulttec-focus-boot"
-  # Aplicar el estado actual (mode.state) sin esperar al próximo boot.
-  sudo systemctl start vaulttec-focus-boot.service || warn "vaulttec-focus-boot falló en el arranque inmediato"
-fi
 
 # 3) Config eww -> ~/.config/eww
 mkdir -p "$EWW_DIR"
