@@ -18,8 +18,12 @@
 - **READ**: el modo READ muestra tu lista de libros de Obsidian
   (`Read/Read.md`) con checkboxes — **TERMINADOS** y **EN PROGRESO**— y puedes
   marcar/desmarcar un libro clicando la checkbox directamente en el wallpaper.
-- **Stats sincronizados con Anki** (Alemán, Hackerman) no tienen clic: se
-  muestran `aprendidas / total (%)` desde AnkiConnect, sin racha.
+- **Lista de tareas**: las 10 actividades (GYM, VOLLEY, MEDITATION, DRAW,
+  COOL SHOWER, READ, LANGUAGES, HACKERMAN, EAR, GEORGIA) se muestran en una
+  sola columna compacta; todas quedan visibles sin hacer scroll.
+- **Stats sincronizados con Anki** (LANGUAGES, HACKERMAN, EAR, GEORGIA) no
+  tienen clic: muestran la cuenta regresiva **Unseen** (`X restantes de Y`)
+  leída desde AnkiConnect, sin racha.
 
 Esto se sirve desde `http://127.0.0.1:8123/fallout-stats.html`. El fondo es
 una ventana Brave gestionada por `launcher/fallout.py`; **SUPER+B** (`fallout-
@@ -33,49 +37,48 @@ y al clicar otra ventana el fondo vuelve al modo pasivo.
 | GYM | Clic (+1) en días de gym (lun→sáb, según `GYM_DAYS` en el HTML); domingo BREAK suma solo |
 | VOLLEY, MEDITATION, DRAW, COOL SHOWER | Clic (+1) cualquier día |
 | READ | Clic (+1) cualquier día, **o** marca un libro como `[x]` terminado en el modo READ (auto-+1). Deshacer: clic derecho en READ |
-| HACKERMAN, GERMAN | Automático: hoy debe haber **+10 tarjetas nuevas** sobre las de ayer |
+| LANGUAGES, HACKERMAN, EAR, GEORGIA | Automático: el contador **Unseen** del mazo bajó HOY al menos su **cuota** (nuevas aprendidas hoy) |
 
-> **Meta Anki (+10)**: en el hint de cada mazo (GERMAN/HACKERMAN) se muestra
-> cuántas tarjetas nuevas faltan para cumplir la meta, p. ej.
-> `HACKERMAN: 350 / 400 (87%) — faltan 7 para +10`, y `— meta +10 ✓` al lograrla.
+> **Meta Anki (cuota de nuevas/día)**: en el hint de cada mazo se muestra la
+> cuenta regresiva y lo que falta de la meta, p. ej.
+> `HACKERMAN: 4329 restantes de 4457 — faltan 25 nuevas para 25`, y
+> `— meta 25 nuevas hoy ✓` al lograrla. Cuotas (`ANKI_QUOTAS` en el HTML):
+> HACKERMAN 25, LANGUAGES 16, EAR 11, GEORGIA 5. El descenso del contador
+> Unseen es el mismo dato que el add-on "More Overview Stats" (fiable también
+> desde el móvil). HACKERMAN y LANGUAGES se desglosan por mazo hijo (casillas
+> con logo debajo del Vault Boy), cada una con su propio contador restante.
 
-## Modo ERROR
+## Modo ERROR (alerta roja)
 
 Entra en ERROR mientras falte **cualquiera** de las tareas del día: **GYM** +
 **VOLLEY** + **MEDITATION** + **DRAW** + **COOL SHOWER** + **READ** (marcado con
-clic o al terminar un libro), o **HACKERMAN/GERMAN** sin **+10 tarjetas**
-sobre ayer. Todo el escritorio cambia a la paleta roja y aparece el overlay
-**ERROR** (eww) encima de todas las ventanas:
+clic o al terminar un libro), o una categoría Anki sin su **cuota de nuevas**
+de hoy (o con tarjetas sin ver). En ese estado **todo el escritorio cambia a la
+paleta roja** (`fallout-alert-mode.sh` → theme-red) y el wallpaper se tiñe de
+rojo (sin overlay de texto: la lista "ERROR / SIN COMPLETAR" se eliminó).
 
-```
-ERROR          ← palabra fija, centrada
-HOY: GYM — SIN COMPLETAR
-HOY: VOLLEY — SIN COMPLETAR
-…              ← lista dinámica de tareas pendientes
-```
-
-Al completar todo, la confetti… no: vuelve la paleta normal y el overlay se
-cierra. El overlay es **tras click-through** (los clics pasan a lo que haya
-debajo), así que no bloquea el trabajo.
+Al completar todo, vuelve la paleta normal.
 
 ### Reglas del modo ERROR
 
-1. **Lista dinámica** debajo de la palabra: crece/encoge hacia abajo sin mover
-   la palabra (que está fija y centrada).
-2. **Excepción Anki**: al abrir Anki, el overlay se oculta → Anki queda
-   visible, es la **única** ventana permitida encima del texto de ERROR.
-   Al cerrar Anki (si el modo sigue activo) el overlay reaparece.
-3. **Reparación manual**: si el overlay falla (p. ej. se cayó eww), pulsa el
-   botón **⟳** de la barra de estado diario para refrescarlo todo y reabrir el
-   overlay. Ya no hay re-emisión automática cada 30 s.
+1. El cambio es solo **visual** (paleta roja + tinte en el wallpaper): no
+   bloquea ventanas ni el uso del sistema.
+2. El overlay de eww con el texto "ERROR" (`eww/errormode-render.py`) ya no se
+   muestra por defecto: `EWW_ENABLED=0` en `scripts/fallout-alert-mode.sh`.
+   Si quieres reactivarlo, pon `EWW_ENABLED=1` y revisa `docs/EWW.md`.
 
-## Refresco manual
+## Refresco manual y sync de Anki
 
 En la barra de estado diario (`HOY: GYM — ✓GYM …`) hay un botón **⟳** que
-actualiza todo a demanda: rachas/`done` desde `serve.py`, tarjetas de Anki,
-progreso de GYM y lista de libros, y re-evalúa el modo ERROR. El wallpaper solo
-sigue refrescando Anki/rachas/libros cada 60 s y el descanso dominical de GYM
-se auto-suma; si quieres ver un cambio al instante, usa el botón.
+actualiza todo a demanda y **sincroniza Anki** (AnkiConnect → AnkiWeb): rachas/
+`done` desde `serve.py`, tarjetas de Anki, progreso de GYM, lista de libros, y
+re-evalúa el modo ERROR. Al pulsarlo se muestra `SYNC ✓` en el hint.
+
+El wallpaper **no sincroniza Anki automáticamente**: solo lo hace al pulsar
+⟳. Anki sincroniza con AnkiWeb al **abrir/cerrar el perfil** (preferencia
+por defecto de Anki) — así se evitan syncs forzados cada pocos minutos (lag y
+tarjetas devueltas por conflictos). Los contadores se refrescan cada 60 s con
+lecturas locales (sin sincronizar), y el descanso dominical de GYM se auto-suma.
 
 ## Almacenamiento
 
@@ -84,7 +87,8 @@ se auto-suma; si quieres ver un cambio al instante, usa el botón.
 | Rachas y "hecho hoy" | `points.md` (env `POINTS_FILE`) vía `serve.py` |
 | Lista de libros (READ) | `Read/Read.md` (checkbox Obsidian: `[ ]`/`[x]`) |
 | Progresión gym (kg) | vault GYM, `.md` por ejercicio (`GYM_ROOT`) |
-| Tarjetas/días (Hackerman/Alemán) | `localStorage` del perfil Brave (`~/.config/fallout-wallpaper`) |
+| Contadores Anki (caché) | `localStorage` del perfil Brave (`vt_anki_cache`) |
+| Nuevas aprendidas hoy (snapshot diario) | `localStorage` del perfil Brave (`vt_anki_snap`) |
 | Estado del modo alerta | `~/.config/fallout-wallpaper/mode.state` (`RED`/`NORMAL`) |
 
 ## Comandos útiles
@@ -94,12 +98,9 @@ se auto-suma; si quieres ver un cambio al instante, usa el botón.
 ~/.local/bin/fallout-alert-mode.sh on
 ~/.local/bin/fallout-alert-mode.sh off
 
-# Ver las capas (surface del overlay)
-hyprctl layers
-
 # Ver qué hay en marcha
-pgrep -af "serve.py|fallout.py|fallout-anki-hider|eww"
+pgrep -af "serve.py|fallout.py"
 
 # Logs
-journalctl --user -b | grep -iE 'fallout|vault-tec|eww'
+journalctl --user -b | grep -iE 'fallout|vault-tec'
 ```

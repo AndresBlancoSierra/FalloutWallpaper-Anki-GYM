@@ -58,4 +58,5 @@ bordes `192,40,40`, acentos `255,32,32`).
 ## Historial de estado
 
 El script guarda el modo actual en `~/.config/fallout-wallpaper/mode.state`
-(`RED` o `NORMAL`); lo usa el overlay y el hider de Anki (`docs/EWW.md`).
+(`RED` o `NORMAL`); lo usa el modo alerta roja (y el overlay de eww si está
+activado, ver `docs/EWW.md`).

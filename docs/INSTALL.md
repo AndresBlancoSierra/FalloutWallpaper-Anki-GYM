@@ -34,10 +34,12 @@ exec-once = hyprpm reload   # en hyprland.conf (para que cargue al arrancar)
 > después, relanza la ventana del wallpaper (matarla y `fallout.py` la crea de
 > nuevo enrollada como fondo) o reinicia la sesión.
 
-## 3. eww con `:passthrough` (requerido por el overlay de ERROR)
+## 3. eww con `:passthrough` (opcional: solo para el overlay de ERROR)
 
-El eww de los repos de Arch no soporta `:passthrough`. Hay que compilar el
-fork con la PR #1437:
+El overlay de eww con el texto "ERROR" está **desactivado por defecto**
+(`EWW_ENABLED=0` en `scripts/fallout-alert-mode.sh`); el modo alerta roja solo
+cambia la paleta. Si quieres reactivarlo, compila este fork (el eww de los
+repos de Arch no soporta `:passthrough`):
 
 ```bash
 git clone --branch add-wayland-passthrough https://github.com/LemonKronos/eww.git ~/Proyects/eww-passthrough
@@ -52,7 +54,7 @@ Verifica: `eww --help | grep passthrough` debe mostrar la flag
 Asegúrate de que `~/.local/bin` tiene prioridad sobre el eww del sistema en tu
 `PATH`.
 
-## 4. Fuente VT323 (para el render del overlay)
+## 4. Fuente VT323 (opcional: para el render del overlay eww)
 
 ```bash
 mkdir -p ~/.local/share/fonts
@@ -68,12 +70,14 @@ puedes forzarla con la env `VT323_FONT`.)
 - Instala Anki y el plugin **AnkiConnect** (Tools → Add-ons → código
   `2055492159`).
 - La API queda en `http://127.0.0.1:8765` (la usa el wallpaper para contar
-  tarjetas aprendidas por mazo).
+  tarjetas por mazo: `deckNames` + `findCards`).
 - Los mazos que se sincronizan se definen en `fallout-stats.html` →
   `DECK_SYNC`:
-  - **GERMAN**: primer mazo cuyo nombre contenga `1000`, `refold`,
-    `deutsch`/`deutch` (palabras de alemán).
-  - **HACKERMAN**: mazo `Hackerman` (o cualquier sub-mazo `Hackerman::…`).
+  - **LANGUAGES**: mazo `Languages` (sub-mazos DE, MORSE…).
+  - **HACKERMAN**: mazo `Hackerman` (sub-mazos AWS, CCNA, LFCS, SEC+, SQL, PY,
+    OSCP…).
+  - **EAR**: mazo `Ear Training`.
+  - **GEORGIA**: mazo `Georgia`.
 
 ## 6. Instalar el repo
 
@@ -110,7 +114,8 @@ Para ver qué haría sin tocar nada: `bash setup/install.sh --dry-run`.
 - **Temas**: `scripts/fallout-alert-mode.sh` captura tu tema actual de omarchy
   como `theme-normal` y deriva `theme-red` automáticamente en el primer `on`.
   Solo necesitas tener el tema de omarchy activo.
-- **Ajustar el overlay**: posición y estética en
+- **Overlay de ERROR (eww)**: desactivado por defecto (`EWW_ENABLED=0`). Si lo
+  reactivas (`EWW_ENABLED=1`), posición y estética en
   `~/.config/eww/eww.yuck` (defvars `err_x`, `err_y`) y
   `~/.config/eww/errormode-config.json`. Ver `docs/EWW.md`.
 - **Comprobación**:
@@ -134,13 +139,14 @@ exec-once = sleep 8 && python3 "…/launcher/fallout.py"
 ```
 
 Esto levanta el servidor (serve.py) y el orquestador (fallout.py → Brave) en
-cada sesión. Todo lo demás (overlay, hider, modo alerta) se auto-gestiona:
+cada sesión. El modo alerta se auto-gestiona:
 
 - `fallout-stats.html` evalúa las tareas pendientes al cargar y publica
   `/api/alert` (true/false) → `serve.py` llama a `fallout-alert-mode.sh`.
-- `fallout-alert-mode.sh on` abre el overlay de eww (arranca el daemon si hace
-  falta) y levanta el hider de Anki.
-- Cada 30 s el wallpaper re-publica su estado (auto-reparación).
+- `fallout-alert-mode.sh on` cambia el tema del escritorio a la paleta roja
+  (y, si `EWW_ENABLED=1`, abre el overlay de eww).
+- El estado de alerta se re-publica en el refresco manual (botón ⟳) y en el
+  arranque.
 
 ## Troubleshooting rápido
 
@@ -148,7 +154,6 @@ cada sesión. Todo lo demás (overlay, hider, modo alerta) se auto-gestiona:
 | ------- | -------------- |
 | No se ve el fondo | `hyprpm reload` / hyprwinwrap no cargado |
 | `/api/*` responden 404 | serve.py no a la escucha o `FALLOUT_WEB_ROOT` mal |
-| "ERROR" no aparece | `fallout-alert-mode.sh on` a mano; revisar `mode.state` |
-| El overlay cubre y molesta | No tocar; es passthrough (los clics pasan). Para ocultar: completar tareas o cerrar Anki |
+| El tema rojo no aparece | `fallout-alert-mode.sh on` a mano; revisar `mode.state` |
 | Anki no cuenta tarjetas | AnkiConnect apagado o el mazo no matchea `DECK_SYNC` |
-| La palabra no usa VT323 | Revisar `fc-match VT323` y `VT323_FONT` |
+| El overlay de eww no sale | Está desactivado (`EWW_ENABLED=0`); para activarlo ver sección 3 |

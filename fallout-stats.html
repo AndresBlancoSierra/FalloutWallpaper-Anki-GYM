@@ -19,6 +19,26 @@
   --amber: #f0b000;
   --amber-bright: #ffce00;
 
+  /* verde completado = MODO COMPLETADO exacto. Una fila/box hecha reproduce
+     fielmente cómo se vería con el tema normal (sin alerta), para que sea la
+     transición: error → filas verdes una a una → todo hecho → el alert se
+     apaga y cambia todo el tema. Valores fijos: con body.alert la paleta se
+     vuelve roja y no debe afectar a lo ya completado. */
+  --done: #18ff62;                          /* = --phosphor (normal) */
+  --done-soft: #4aef98;                     /* = --phosphor-soft (normal) */
+  --done-tint-080: rgba(24,255,98,0.08);    /* = --tint-080 */
+  --done-tint-120: rgba(24,255,98,0.12);    /* = --tint-120 */
+  --done-tint-160: rgba(24,255,98,0.16);    /* = --tint-160 */
+  --done-today-bg: rgba(24,255,98,0.32);    /* = --today-bg */
+  --done-line-soft: rgba(24,255,98,0.35);   /* = --line-soft */
+  --done-line-mid: rgba(24,255,98,0.4);     /* = --line-mid */
+  --done-line-strong: rgba(24,255,98,0.5);  /* = --line-strong */
+  --done-line-faint: rgba(24,255,98,0.3);   /* = --line-faint */
+  --done-glow-soft: rgba(24,255,98,0.55);   /* = --glow-soft */
+  --done-glow: rgba(24,255,98,0.6);         /* = --glow */
+  --done-glow-strong: rgba(24,255,98,0.7);  /* = --glow-strong */
+  --done-glow-bright: rgba(24,255,98,0.8);  /* = --glow-bright */
+
   /* tintes del tema (verde) */
   --line: rgba(24,255,98,0.45);
   --line-strong: rgba(24,255,98,0.5);
@@ -213,7 +233,7 @@ p { line-height: 1.45; margin: .4rem 0; }
 .hint { margin-top: .4rem; font-size: .95rem; }
 .hint.ok { color: #fff; text-shadow: 0 0 6px var(--glow-bright); }
 .hint.deny { color: #ff6060; text-shadow: 0 0 6px rgba(255,60,60,0.7); }
-.hint.done { color: var(--phosphor-soft); }
+.hint.done { color: var(--done-soft); }
 #screen.deny { animation: denyflash .32s ease-out; }
 @keyframes denyflash {
   0% { box-shadow: inset 0 0 10px rgba(255,60,60,0.2); }
@@ -222,6 +242,11 @@ p { line-height: 1.45; margin: .4rem 0; }
 }
 .vaultboy-desc { border-top: 1px solid var(--line-faint); margin-top: .6rem; padding: .6rem .2rem .2rem; font-size: 1rem; line-height: 1.4; min-height: 4.2em; }
 .stat-name { color: #fff; text-shadow: 0 0 6px var(--glow-strong); }
+/* Stat seleccionada con su acción del día completada -> todo el panel en verde. */
+.vaultboy-box.done { border-color: var(--done-line-faint); background: radial-gradient(circle at 50% 35%, var(--done-tint-080), transparent 70%); }
+.vaultboy-box.done .stat-name { color: #fff; text-shadow: 0 0 6px var(--done-glow-strong); }
+.vaultboy-box.done .vaultboy-stage img { filter: drop-shadow(0 0 8px var(--done-glow-soft)); }
+.vaultboy-box.done .vaultboy-desc { border-top-color: var(--done-line-faint); }
 .gym-list { margin-top: .3rem; text-align: left; }
 .gym-ex { margin-bottom: .45rem; }
 .gym-name { color: var(--name-tint); font-size: .95rem; }
@@ -239,19 +264,60 @@ p { line-height: 1.45; margin: .4rem 0; }
 .read-cb:hover { background: var(--tint-120); border-color: var(--phosphor); }
 .read-title.done { text-decoration: line-through; opacity: .7; }
 
-.special-list { display: flex; flex-direction: column; gap: .6rem; }
-.special-row { display: grid; grid-template-columns: 40px 110px 1fr 46px; gap: .5rem; align-items: center; cursor: pointer; padding: .2rem .3rem; margin: 0 -.3rem; transition: background .15s; }
+.special-list { display: flex; flex-direction: column; gap: .3rem; }
+.special-row { display: grid; grid-template-columns: 40px 110px 1fr 46px; gap: .5rem; align-items: center; cursor: pointer; padding: .15rem .3rem; margin: 0 -.3rem; transition: background .15s; }
 .special-row:hover { background: var(--tint-080); }
 .special-row.selected { background: var(--tint-160); outline: 1px dashed var(--line-strong); outline-offset: -3px; }
 .special-row.selected .name, .special-row.selected .val { color: #fff; text-shadow: 0 0 8px var(--glow-bright); }
-.special-row .letter { font-size: 1.8rem; color: #fff; background: var(--tint-120); border: 1px solid var(--line-mid); text-align: center; line-height: 1.35; }
+.special-row .letter { font-size: 1.5rem; color: #fff; background: var(--tint-120); border: 1px solid var(--line-mid); text-align: center; line-height: 1.35; }
 .special-row.today .letter { background: var(--today-bg); border-color: var(--phosphor); box-shadow: 0 0 8px var(--glow-soft); }
 .special-row.today .name { color: #fff; }
-.special-row.done .val { color: var(--phosphor-soft); opacity: .85; }
-.special-row.done .segbar i { opacity: .55; }
 .special-row.today.done .letter { box-shadow: 0 0 10px var(--glow-strong); }
 .special-row .name { font-size: 1.2rem; }
 .special-row .val { text-align: right; font-size: 1.6rem; color: #fff; }
+
+/* ================= COMPLETADO (= MODO COMPLETADO exacto) =================
+   Una fila hecha se ve EXACTAMENTE igual que en el modo completado (paleta
+   verde normal), con valores fijos para sobrevivir a body.alert. Así se
+   produce la transición: error → cada fila pasa a verde → todo hecho → el
+   alert se apaga y cambia todo el tema. */
+.special-row.done .letter {
+  color: #fff;
+  background: var(--done-tint-120);
+  border-color: var(--done-line-mid);
+  box-shadow: none;
+}
+.special-row.today.done .letter {
+  background: var(--done-today-bg);
+  border-color: var(--done);
+  box-shadow: 0 0 8px var(--done-glow-soft), 0 0 10px var(--done-glow-strong);
+}
+.special-row.done .name { color: var(--done); }
+.special-row.today.done .name { color: #fff; }
+.special-row.selected.done .name,
+.special-row.selected.done .val {
+  color: #fff;
+  text-shadow: 0 0 8px var(--done-glow-bright);
+}
+.special-row.done:hover { background: var(--done-tint-080); }
+.special-row.selected.done {
+  background: var(--done-tint-160);
+  outline-color: var(--done-line-strong);
+}
+.special-row.done .segbar i {
+  background: var(--done-tint-080);
+  border-color: var(--done-line-soft);
+  opacity: .55;
+}
+.special-row.done .segbar i.on {
+  background: var(--done);
+  border-color: var(--done);
+  box-shadow: 0 0 6px var(--done-glow);
+}
+.special-row.done .val {
+  color: var(--done-soft);
+  opacity: .85;
+}
 
 .segbar { display: flex; gap: 2px; }
 .segbar i { flex: 1; height: 14px; background: var(--tint-080); border: 1px solid var(--line-soft); }
@@ -330,38 +396,7 @@ body.alert {
   background: rgba(255,0,0,0.10); mix-blend-mode: multiply; display: none;
 }
 body.alert #alert-tint { display: block; }
-#error-alert {
-  position: fixed; inset: 0; z-index: 60; pointer-events: none;
-  display: none; flex-direction: column; align-items: center; justify-content: flex-start;
-  gap: 1.1rem; text-align: center; padding: 2rem;
-  padding-top: calc(36vh - clamp(3.5rem, 10vw, 8rem));
-}
-body.alert #error-alert { display: flex; }
-#err-word {
-  font-size: clamp(7rem, 20vw, 16rem); line-height: 1;
-  color: #ff0000; letter-spacing: .08em; font-family: inherit;
-  text-shadow: 0 0 4px #ff0000, 0 0 18px rgba(255,0,0,0.8), 0 0 60px rgba(255,0,0,0.5);
-  animation: errpulse 1.1s steps(2, jump-none) infinite;
-}
-#err-sub { font-size: clamp(1.4rem, 3.4vw, 2.4rem); color: var(--phosphor-soft); }
-#err-sub .err-line { display: block; margin: .15rem 0; }
-#err-hint { display: none; }
-@keyframes errpulse {
-  0% { opacity: 1; transform: scale(1); }
-  25% { opacity: .35; transform: scale(1.03); }
-  50% { opacity: 1; transform: scale(0.99); }
-  75% { opacity: .45; transform: scale(1.02); }
-  100% { opacity: 1; transform: scale(1); }
-}
-body.alert #err-word {
-  animation: errpulse .8s steps(3, jump-none) infinite, errjitter .4s steps(2, jump-none) infinite;
-}
-@keyframes errjitter {
-  0% { transform: translate(0,0); }
-  33% { transform: translate(-2px,1px); }
-  66% { transform: translate(2px,-1px); }
-  100% { transform: translate(-1px,2px); }
-}
+
 </style>
 </head>
 <body>
@@ -407,11 +442,6 @@ body.alert #err-word {
 <div id="vhs-strip"></div>
 
 <div id="alert-tint"></div>
-<div id="error-alert">
-  <div id="err-word">ERROR</div>
-  <div id="err-sub"></div>
-  <div id="err-hint"></div>
-</div>
 
 <script>
 /* ================= DATOS ================= */
@@ -429,11 +459,13 @@ const SPECIAL = [
   { letter: "R", name: "READ", val: 0, max: 365, img: "img/special/Perception.png",
     desc: "Lectura diaria: libros terminados y en progreso." },
   { letter: "E", name: "LANGUAGES", val: 0, img: "img/special/Intelligence.png",
-    desc: "Repaso diario de idiomas: alemán (≥10) e inglés (≥5)." },
+    desc: "Repaso diario de idiomas: alemán, inglés y morse (≥16 nuevas/día)." },
   { letter: "H", name: "HACKERMAN", val: 0, img: "img/perks/Fo4_Hacker.png",
-    desc: "Nivel técnico: retos, scripts y aprendizaje de código y hacking." },
-  { letter: "P", name: "PIANO", val: 0, img: "img/special/Charisma.png",
-    desc: "Práctica de piano: escalas, técnica, piezas y constancia." }
+    desc: "Nivel técnico: AWS, Python, SQL, LFCS, Security+, CCNA y OSCP (≥25 nuevas/día)." },
+  { letter: "P", name: "EAR", val: 0, img: "img/special/Charisma.png",
+    desc: "Entrenamiento auditivo: intervalos, acordes, ritmo y piano (≥11 nuevas/día)." },
+  { letter: "A", name: "GEORGIA", val: 0, img: "img/special/Agility.png",
+    desc: "Georgia Tech: criptografía, seguridad de sistemas, redes y lab de seguridad (≥5 nuevas/día)." }
 ];
 
 /* ================= SELECT ================= */
@@ -456,6 +488,7 @@ function selectStat(i) {
   }, 120);
   renderDesc(s);
   updateClickHint(s);
+  updateVaultBoyDone();
   const stage = document.querySelector(".vaultboy-stage");
   if (stage) stage.classList.toggle("hack", s.name === "HACKERMAN" || s.name === "LANGUAGES");
   if (s.name === "HACKERMAN") renderHackBoxes();
@@ -492,32 +525,34 @@ const ANKI_URL = "http://127.0.0.1:8765";
 const DECK_SYNC = [
   { stat: "LANGUAGES", deck: "Languages", label: "tarjetas" },
   { stat: "HACKERMAN", deck: "Hackerman", label: "tarjetas" },
-  { stat: "PIANO", deck: "Piano", label: "tarjetas" }
+  { stat: "EAR", deck: "Ear Training", label: "tarjetas" },
+  { stat: "GEORGIA", deck: "Georgia", label: "tarjetas" }
 ];
-// Meta diaria de Anki: hoy deben responderse AL MENOS esta cantidad de tarjetas
-// (rated:1) para que el día cuente como completado (LANGUAGES/PIANO).
-const ANKI_MIN_DELTA = 10;
-// HACKERMAN se desglosa por deck; cada deck tiene su propia meta diaria y su
-// casilla (logo + cuenta). La categoría completa solo cuando TODAS las casillas
-// están verdes. `kw` se matchea contra un subdeck directo de Hackerman o contra
-// un mazo a nivel raíz (cubre antes y después de fusionar SQL/PYTHON en Anki).
+// Meta diaria de Anki: "nuevas aprendidas hoy" = el contador de tarjetas sin
+// ver (Unseen) de la categoría bajó AL MENOS esta cantidad hoy. Es el mismo
+// dato que el add-on "More Overview Stats" (columna Unseen): fiable desde el
+// celular porque AnkiConnect lee la colección ya sincronizada con AnkiWeb.
+const ANKI_QUOTAS = { HACKERMAN: 25, EAR: 11, GEORGIA: 5, LANGUAGES: 16 };
+// HACKERMAN se desglosa por deck; cada deck tiene su casilla (logo + contador
+// restante). `kw` se matchea contra un subdeck directo de Hackerman o contra un
+// mazo a nivel raíz (cubre antes y después de fusionar SQL/PYTHON en Anki).
 const HACKERMAN_PARENT = "Hackerman";
 const HACKERMAN_CHILDREN = [
-  { key: "AWS",  kw: "aws",      quota: 10, logo: "img/hack/aws.png" },
-  { key: "CCNA", kw: "ccna",     quota: 5,  logo: "img/hack/ccna.png" },
-  { key: "LFCS", kw: "lfcs",     quota: 5,  logo: "img/hack/lfcs.webp" },
-  { key: "SEC+", kw: "security", quota: 5,  logo: "img/hack/secplus.png" },
-  { key: "SQL",  kw: "sql",      quota: 5,  logo: "img/hack/sql.png" },
-  { key: "PY",   kw: "python",   quota: 5,  logo: "img/hack/python.webp" }
+  { key: "AWS",  kw: "aws",      logo: "img/hack/aws.png" },
+  { key: "CCNA", kw: "ccna",     logo: "img/hack/ccna.png" },
+  { key: "LFCS", kw: "lfcs",     logo: "img/hack/lfcs.webp" },
+  { key: "SEC+", kw: "security", logo: "img/hack/secplus.png" },
+  { key: "SQL",  kw: "sql",      logo: "img/hack/sql.png" },
+  { key: "PY",   kw: "python",   logo: "img/hack/python.webp" },
+  { key: "OSCP", kw: "oscp",     logo: "img/hack/oscp.png" }
 ];
-const HACKERMAN_QUOTA_TOTAL = HACKERMAN_CHILDREN.reduce((a, c) => a + c.quota, 0);
 // LANGUAGES se desglosa igual que HACKERMAN: casillas por idioma con bandera.
 const LANGUAGES_PARENT = "Languages";
 const LANGUAGES_CHILDREN = [
-  { key: "DE", kw: "deutsch", quota: 10, logo: "img/lang/de.png" },
-  { key: "EN", kw: "english", quota: 5,  logo: "img/lang/us.png" }
+  { key: "DE",    kw: "deutsch", logo: "img/lang/de.png" },
+  { key: "EN",    kw: "english", logo: "img/lang/us.png" },
+  { key: "MORSE", kw: "morse",   logo: "img/lang/morse.png" }
 ];
-const LANGUAGES_QUOTA_TOTAL = LANGUAGES_CHILDREN.reduce((a, c) => a + c.quota, 0);
 
 async function anki(action, params) {
   const res = await fetch(ANKI_URL, {
@@ -531,51 +566,49 @@ async function anki(action, params) {
   return data.result;
 }
 
-function updateSyncedRow(statName, learned, total, rated) {
+function updateSyncedRow(statName, remaining, total, live) {
   const idx = SPECIAL.findIndex(s => s.name === statName);
   if (idx < 0) return;
-  cacheAnki(statName, learned, total, rated);
-  // El snapshot diario (meta +10) solo se graba con datos EN VIVO de
-  // AnkiConnect; la caché aplicada al cargar no debe tocar el historial.
-  if (rated != null) recordHackSnapshot(statName, rated);
-  SPECIAL[idx].val = learned;
+  cacheAnki(statName, remaining, total);
+  // El snapshot diario ("nuevas aprendidas hoy") solo se graba con datos EN
+  // VIVO de AnkiConnect; la caché aplicada al cargar no debe tocar el historial.
+  if (live !== false) ankiNewToday(statName, remaining);
+  SPECIAL[idx].val = remaining;
   const row = document.querySelectorAll("#special-list .special-row")[idx];
   if (!row) return;
-  const pct = total > 0 ? learned / total : 0;
+  const pct = total > 0 ? (total - remaining) / total : 0;
   row.querySelector(".segbar").innerHTML = segBar(10, Math.round(pct * 10));
-  row.querySelector(".val").textContent = learned;
-  row.title = `${learned} / ${total} (${Math.round(pct * 100)}%)`;
+  row.querySelector(".val").textContent = remaining;
+  row.title = `${remaining} restantes de ${total} (${Math.round(pct * 100)}%)`;
   if (idx === currentSel) updateAnkiStatus(SPECIAL[idx]);
   checkAlert();
 }
 
-async function chunkCardInfo(ids, size = 800) {
-  const learned = [];
-  for (let i = 0; i < ids.length; i += size) {
-    const chunk = ids.slice(i, i + size);
-    const cards = await anki("cardsInfo", { cards: chunk });
-    for (const c of cards) if ((c.reps || 0) > 0) learned.push(c.cardId);
-  }
-  return learned.length;
-}
-
 /* ================= CACHÉ ANKI ================= */
 const ANKI_CACHE_KEY = "vt_anki_cache";
+const ANKI_SNAP_KEY = "vt_anki_snap";
 
 function loadAnkiCache() {
   try { return JSON.parse(localStorage.getItem(ANKI_CACHE_KEY)) || {}; } catch (e) { return {}; }
 }
-function cacheAnki(statName, learned, total, rated) {
+function cacheAnki(key, remaining, total) {
   const c = loadAnkiCache();
-  c[statName] = { learned, total };
-  if (rated != null) c[statName].rated = rated;
+  c[key] = { remaining, total };
   try { localStorage.setItem(ANKI_CACHE_KEY, JSON.stringify(c)); } catch (e) { /* sin almacenamiento */ }
 }
 function applyAnkiCache() {
   const c = loadAnkiCache();
-  for (const name in c) updateSyncedRow(name, c[name].learned, c[name].total);
+  for (const key in c) {
+    const idx = SPECIAL.findIndex(s => s.name === key);
+    if (idx < 0) continue;
+    const e = c[key];
+    updateSyncedRow(key, e.remaining != null ? e.remaining : (e.learned || 0), e.total, false);
+  }
 }
 
+// SIN sync automático: Anki sincroniza solo al abrir/cerrar el perfil y cuando
+// se pulsa el botón de refresco (manualRefresh -> anki("sync")). Esto evita
+// syncs forzados cada 3 min (lag y tarjetas devueltas por conflictos).
 async function syncAnki() {
   try {
     const decks = await anki("deckNames");
@@ -588,34 +621,23 @@ async function syncAnki() {
         match = decks.find(d => cfg.keywords.some(k => d.toLowerCase().includes(k)));
       }
       if (!match) {
-        updateSyncedRow(cfg.stat, 0, 0, 0);
+        updateSyncedRow(cfg.stat, 0, 0);
         continue;
       }
-      // deck:"..." (con comillas) rompe el parser de búsqueda de Anki en esta
-      // instalación; el nombre sin comillas incluye el mazo y todos sus subdecks.
-      const ids = await anki("findCards", { query: `deck:${match}` });
+      // deck:"..." con comillas SÍ funciona en esta instalación (verificado:
+      // deck:Ear Training::Piano sin comillas devuelve 0; con comillas 393).
+      // El nombre entre comillas incluye el mazo y todos sus subdecks.
+      const ids = await anki("findCards", { query: `deck:"${match}"` });
       const total = ids.length;
-      const learned = total > 0 ? await chunkCardInfo(ids) : 0;
-      if (cfg.stat === "HACKERMAN" || cfg.stat === "LANGUAGES") {
-        // Meta diaria por deck (casillas): cada hijo se consulta con rated:1 y
-        // se guarda en el historial como <STAT>::<KEY>.
-        if (cfg.stat === "HACKERMAN") {
-          await syncHackChildren(decks);
-          updateSyncedRow(cfg.stat, learned, total, todayHackTotal());
-        } else {
-          await syncLangChildren(decks);
-          updateSyncedRow(cfg.stat, learned, total, todayLangTotal());
-        }
-      } else {
-        // Meta del día: cartas RESPONDIDAS hoy (rated:1). En esta instalación
-        // `introduced:1` no registra las nuevas estudiadas por custom study en el
-        // celular (verificado: 5 nuevas estrenadas hoy daban introduced:1=0) y a
-        // veces cuenta cartas nunca estudiadas; rated:1 coincide con la actividad
-        // real del día (revlog). El total acumulado fluctúa al importar/borrar
-        // tarjetas, así que compararlo entre días da deltas falsos.
-        const newIds = await anki("findCards", { query: `deck:${match} rated:1` });
-        updateSyncedRow(cfg.stat, learned, total, newIds.length);
+      const newIds = await anki("findCards", { query: `deck:"${match}" is:new` });
+      if (cfg.stat === "HACKERMAN") {
+        await syncHackChildren(decks);
+      } else if (cfg.stat === "LANGUAGES") {
+        await syncLangChildren(decks);
       }
+      // Contador regresivo: el número visible es lo que queda sin ver (Unseen),
+      // idéntico a la columna "Unseen" del add-on More Overview Stats.
+      updateSyncedRow(cfg.stat, newIds.length, total);
     }
   } catch (e) {
     /* Anki sin conexión: se muestran los valores de la caché */
@@ -715,7 +737,7 @@ function streakLast(stat) {
 }
 /* Racha "efectiva": el valor guardado vale mientras el último día hecho sea
    hoy o ayer. Si pasó un día completo sin hacer la actividad, se reinicia (0).
-   LANGUAGES/HACKERMAN/PIANO (max==null) no usan rachas. */
+   LANGUAGES/HACKERMAN/EAR/GEORGIA (max==null) no usan rachas. */
 function effectiveStreak(stat) {
   const last = streakLast(stat);
   if (last !== todayStr() && last !== yestStr()) return 0;
@@ -753,18 +775,16 @@ function updateAnkiStatus(s) {
   if (s.max == null) {
     const c = loadAnkiCache()[s.name] || {};
     if (c.total != null) {
-      const pct = c.total > 0 ? Math.round(100 * (c.learned || 0) / c.total) : 0;
-      text = `${s.name}: ${c.learned || 0} / ${c.total} (${pct}%)`;
-      if (s.name === "HACKERMAN") {
-        const need = hackMissingTotal();
-        text += need > 0 ? ` — faltan ${need} para ${HACKERMAN_QUOTA_TOTAL}` : ` — meta ${HACKERMAN_QUOTA_TOTAL} ✓`;
-      } else if (s.name === "LANGUAGES") {
-        const need = langMissingTotal();
-        text += need > 0 ? ` — faltan ${need} para ${LANGUAGES_QUOTA_TOTAL}` : ` — meta ${LANGUAGES_QUOTA_TOTAL} ✓`;
-      } else {
-        const done = (loadHackHistory()[s.name] || {})[todayStr()] || 0;
-        const need = Math.max(0, ANKI_MIN_DELTA - done);
-        text += need > 0 ? ` — faltan ${need} tarjetas para ${ANKI_MIN_DELTA}` : ` — meta ${ANKI_MIN_DELTA} ✓`;
+      const remaining = c.remaining != null ? c.remaining : c.total;
+      const quota = ANKI_QUOTAS[s.name];
+      const today = ankiNewTodayNow(s.name);
+      text = `${s.name}: ${remaining} restantes de ${c.total}`;
+      if (remaining === 0) {
+        text += ` — categoría completada ✓`;
+      } else if (quota != null) {
+        text += today >= quota
+          ? ` — meta ${quota} nuevas hoy ✓`
+          : ` — faltan ${Math.max(0, quota - today)} nuevas para ${quota}`;
       }
     }
   }
@@ -838,6 +858,7 @@ function decrementStat(s) {
   postPoints(s.name, "dec").then(ok => { if (!ok) saveDaily(); });
   const el = document.getElementById("click-hint");
   if (el) { el.textContent = s.name + " −1 (racha " + back + "/" + s.max + ")"; el.className = "hint done"; }
+  glitchBurst();
 }
 
 function updateDailyStatus() {
@@ -855,15 +876,19 @@ function updateDailyStatus() {
 }
 
 /* ================= REFRESCO MANUAL ================= */
-function manualRefresh() {
-  syncAnki();
+async function manualRefresh() {
+  const st = document.getElementById("anki-sync-status");
+  if (st) { st.textContent = "SYNC…"; st.className = "hint muted"; st.style.display = ""; }
+  try { await anki("sync"); } catch (e) { /* sin red o sync en curso */ }
+  await syncAnki();
   loadGym();
   loadRead();
-  syncPointsFromServer();
+  await syncPointsFromServer();
   autoGymRestDay();
   renderDaily();
   checkAlert();
   if (document.body.classList.contains("alert")) postAlertState();
+  if (st) { st.textContent = "SYNC ✓"; st.className = "hint ok"; st.style.display = ""; }
   const b = document.getElementById("refresh-btn");
   if (b) {
     b.classList.remove("spinning");
@@ -876,27 +901,38 @@ function manualRefresh() {
 /* ================= ALERTA DE DÍA (ERROR ROJO) ================= */
 function todayGymStat() { return GYM_DAYS[new Date().getDay()]; }
 
-const HACK_KEY = "vt_hack_streak";
-const HACK_V_KEY = "vt_hack_v";
-// v5 de la meta Anki: GERMAN pasó a LANGUAGES (desglose por idioma con claves
-// LANGUAGES::DE, LANGUAGES::EN, cuota propia). El historial v4 no es compatible
-// (clave GERMAN obsoleta) y se descarta UNA vez.
-(function migrateHackHistory() {
-  if (localStorage.getItem(HACK_V_KEY) === "5") return;
-  try { localStorage.removeItem(HACK_KEY); } catch (e) {}
-  try { localStorage.setItem(HACK_V_KEY, "5"); } catch (e) {}
-})();
-function loadHackHistory() {
-  try { return JSON.parse(localStorage.getItem(HACK_KEY)) || {}; } catch (e) { return {}; }
+/* ================= SNAPSHOT DIARIO (nuevas aprendidas hoy) =================
+   Por clave (categoría o mazo hijo) guarda la última fecha + contador Unseen.
+   ankiNewToday(key, current) registra el valor y devuelve las "nuevas" de hoy
+   (descenso del contador desde la última fecha registrada); el delta queda
+   congelado para el resto del día. */
+function loadAnkiSnap() {
+  try { return JSON.parse(localStorage.getItem(ANKI_SNAP_KEY)) || {}; } catch (e) { return {}; }
 }
-function saveHackHistory(h) {
-  try { localStorage.setItem(HACK_KEY, JSON.stringify(h)); } catch (e) { /* sin almacenamiento */ }
+function saveAnkiSnap(s) {
+  try { localStorage.setItem(ANKI_SNAP_KEY, JSON.stringify(s)); } catch (e) { /* sin almacenamiento */ }
 }
-function recordHackSnapshot(stat, learned) {
-  const h = loadHackHistory();
-  h[stat] = h[stat] || {};
-  h[stat][todayStr()] = Math.max(h[stat][todayStr()] || 0, learned);
-  saveHackHistory(h);
+function ankiNewToday(key, current) {
+  const s = loadAnkiSnap();
+  const e = s[key] || {};
+  let delta = 0;
+  if (current != null) {
+    if (e.lastDate && e.lastDate < todayStr()) {
+      delta = Math.max(0, e.lastUnseen - current);
+      s[key] = { lastDate: todayStr(), lastUnseen: current, delta };
+    } else if (e.lastDate === todayStr()) {
+      delta = e.delta || 0;
+      s[key] = { lastDate: todayStr(), lastUnseen: Math.min(e.lastUnseen, current), delta };
+    } else {
+      s[key] = { lastDate: todayStr(), lastUnseen: current, delta: 0 };
+    }
+    saveAnkiSnap(s);
+  }
+  return delta;
+}
+function ankiNewTodayNow(key) {
+  const e = loadAnkiSnap()[key] || {};
+  return e.lastDate === todayStr() && e.delta != null ? e.delta : 0;
 }
 
 /* ================= DESGLOSE HACKERMAN POR DECK ================= */
@@ -918,38 +954,45 @@ function findHackChild(decks, child) {
     return dl !== parent && !dl.startsWith(parent + "::") && dl.includes(kw);
   });
 }
-function hackChildRated(child) {
-  const h = loadHackHistory();
-  return (h[childStatKey(child.key)] || {})[todayStr()] || 0;
+function childRemaining(key) {
+  const c = loadAnkiCache()[key];
+  if (!c || c.remaining == null) return null;
+  return c.remaining;
 }
-function hackChildOk(child) { return hackChildRated(child) >= child.quota; }
-function hackMissing(child) { return Math.max(0, child.quota - hackChildRated(child)); }
-function hackMissingTotal() { return HACKERMAN_CHILDREN.reduce((a, c) => a + hackMissing(c), 0); }
-function todayHackTotal() {
-  return HACKERMAN_CHILDREN.reduce((a, c) => a + hackChildRated(c), 0);
+function childNewToday(key) { return ankiNewTodayNow(key); }
+function childDoneToday(key) {
+  const rem = childRemaining(key);
+  if (rem == null) return false;
+  return rem <= 0 || childNewToday(key) > 0;
 }
 async function syncHackChildren(decks) {
   for (const child of HACKERMAN_CHILDREN) {
+    const key = childStatKey(child.key);
     const match = findHackChild(decks, child);
     if (!match) {
-      recordHackSnapshot(childStatKey(child.key), 0);
-      cacheAnki(childStatKey(child.key), 0, 0, 0);
+      cacheAnki(key, 0, 0);
       continue;
     }
-    const ratedIds = await anki("findCards", { query: `deck:${match} rated:1` });
-    recordHackSnapshot(childStatKey(child.key), ratedIds.length);
-    cacheAnki(childStatKey(child.key), 0, 0, ratedIds.length);
+    const ids = await anki("findCards", { query: `deck:"${match}"` });
+    const newIds = await anki("findCards", { query: `deck:"${match}" is:new` });
+    ankiNewToday(key, newIds.length);
+    cacheAnki(key, newIds.length, ids.length);
   }
   renderHackBoxes();
 }
+// Se dibujan TODAS las casillas con su contador restante: verde si ese mazo
+// bajó hoy (o llegó a 0), rojo si sigue igual.
 function renderHackBoxes() {
   const wrap = document.getElementById("hack-boxes");
   if (!wrap) return;
   wrap.innerHTML = HACKERMAN_CHILDREN.map(c => {
-    const rated = hackChildRated(c);
-    return `<div class="hack-box ${hackChildOk(c) ? "ok" : "bad"}" title="${c.key} ${rated}/${c.quota}">
+    const key = childStatKey(c.key);
+    const rem = childRemaining(key);
+    if (rem == null) return "";
+    const cls = childDoneToday(key) ? "ok" : "bad";
+    return `<div class="hack-box ${cls}" title="${c.key}: ${rem} restantes">
       <img src="${c.logo}" alt="${c.key}">
-      <span class="cnt">${rated}/${c.quota}</span>
+      <span class="cnt">${rem}</span>
     </div>`;
   }).join("");
 }
@@ -973,27 +1016,18 @@ function findLangChild(decks, child) {
     return dl !== parent && !dl.startsWith(parent + "::") && dl.includes(kw);
   });
 }
-function langChildRated(child) {
-  const h = loadHackHistory();
-  return (h[langStatKey(child.key)] || {})[todayStr()] || 0;
-}
-function langChildOk(child) { return langChildRated(child) >= child.quota; }
-function langMissing(child) { return Math.max(0, child.quota - langChildRated(child)); }
-function langMissingTotal() { return LANGUAGES_CHILDREN.reduce((a, c) => a + langMissing(c), 0); }
-function todayLangTotal() {
-  return LANGUAGES_CHILDREN.reduce((a, c) => a + langChildRated(c), 0);
-}
 async function syncLangChildren(decks) {
   for (const child of LANGUAGES_CHILDREN) {
+    const key = langStatKey(child.key);
     const match = findLangChild(decks, child);
     if (!match) {
-      recordHackSnapshot(langStatKey(child.key), 0);
-      cacheAnki(langStatKey(child.key), 0, 0, 0);
+      cacheAnki(key, 0, 0);
       continue;
     }
-    const ratedIds = await anki("findCards", { query: `deck:${match} rated:1` });
-    recordHackSnapshot(langStatKey(child.key), ratedIds.length);
-    cacheAnki(langStatKey(child.key), 0, 0, ratedIds.length);
+    const ids = await anki("findCards", { query: `deck:"${match}"` });
+    const newIds = await anki("findCards", { query: `deck:"${match}" is:new` });
+    ankiNewToday(key, newIds.length);
+    cacheAnki(key, newIds.length, ids.length);
   }
   renderLangBoxes();
 }
@@ -1001,26 +1035,24 @@ function renderLangBoxes() {
   const wrap = document.getElementById("hack-boxes");
   if (!wrap) return;
   wrap.innerHTML = LANGUAGES_CHILDREN.map(c => {
-    const rated = langChildRated(c);
-    return `<div class="hack-box ${langChildOk(c) ? "ok" : "bad"}" title="${c.key} ${rated}/${c.quota}">
+    const key = langStatKey(c.key);
+    const rem = childRemaining(key);
+    if (rem == null) return "";
+    const cls = childDoneToday(key) ? "ok" : "bad";
+    return `<div class="hack-box ${cls}" title="${c.key}: ${rem} restantes">
       <img src="${c.logo}" alt="${c.key}">
-      <span class="cnt">${rated}/${c.quota}</span>
+      <span class="cnt">${rem}</span>
     </div>`;
   }).join("");
 }
 function hackAlertActive(stat) {
-  if (stat === "HACKERMAN") {
-    // Meta: TODAS las casillas de deck verdes (cada una con su cuota rated:1).
-    return HACKERMAN_CHILDREN.some(child => !hackChildOk(child));
-  }
-  if (stat === "LANGUAGES") {
-    // Meta: TODAS las casillas de idioma verdes (DE ≥10, EN ≥5).
-    return LANGUAGES_CHILDREN.some(child => !langChildOk(child));
-  }
-  // Meta: al menos ANKI_MIN_DELTA tarjetas RESPONDIDAS HOY.
-  // Sin comparación con ayer: el total acumulado es poco fiable.
-  const h = loadHackHistory()[stat] || {};
-  return (h[todayStr()] || 0) < ANKI_MIN_DELTA;
+  const quota = ANKI_QUOTAS[stat];
+  if (quota == null) return false;
+  const c = loadAnkiCache()[stat] || {};
+  const remaining = c.remaining != null ? c.remaining : c.total;
+  if (remaining == null) return false;
+  if (remaining <= 0) return false; // categoría completada
+  return ankiNewTodayNow(stat) < quota;
 }
 function activeErrors() {
   const errs = [];
@@ -1032,7 +1064,8 @@ function activeErrors() {
   }
   if (hackAlertActive("HACKERMAN")) errs.push({ type: "anki", stat: "HACKERMAN" });
   if (hackAlertActive("LANGUAGES")) errs.push({ type: "anki", stat: "LANGUAGES" });
-  if (hackAlertActive("PIANO")) errs.push({ type: "anki", stat: "PIANO" });
+  if (hackAlertActive("EAR")) errs.push({ type: "anki", stat: "EAR" });
+  if (hackAlertActive("GEORGIA")) errs.push({ type: "anki", stat: "GEORGIA" });
   return errs;
 }
 function checkAlert() {
@@ -1044,18 +1077,6 @@ function checkAlert() {
   if (isAlert !== _sentAlertState) {
     _sentAlertState = isAlert;
     postAlertState();
-  }
-  const sub = document.getElementById("err-sub");
-  if (sub) {
-    sub.innerHTML = errs.map(e => e.type === "daily"
-      ? `<span class="err-line">HOY: ${e.stat} — SIN COMPLETAR</span>`
-      : e.stat === "HACKERMAN"
-        ? HACKERMAN_CHILDREN.filter(c => !hackChildOk(c))
-            .map(c => `<span class="err-line">${c.key} — SIN COMPLETAR</span>`).join("")
-        : e.stat === "LANGUAGES"
-          ? LANGUAGES_CHILDREN.filter(c => !langChildOk(c))
-              .map(c => `<span class="err-line">${c.key} — SIN COMPLETAR</span>`).join("")
-          : `<span class="err-line">${e.stat} — SIN PROGRESO HOY</span>`).join("");
   }
 }
 
@@ -1083,8 +1104,16 @@ function renderDaily() {
     row.classList.toggle("today", isGymDay(s.name));
     row.classList.toggle("done", doneToday(s.name) || isComplete(s));
   });
+  updateVaultBoyDone();
   updateDailyStatus();
   checkAlert();
+}
+
+function updateVaultBoyDone() {
+  const box = document.querySelector(".vaultboy-box");
+  const s = SPECIAL[currentSel];
+  if (!box || !s) return;
+  box.classList.toggle("done", doneToday(s.name) || isComplete(s));
 }
 
 /* ================= GYM (OBSIDIAN) ================= */

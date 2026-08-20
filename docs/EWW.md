@@ -1,5 +1,11 @@
 # Overlay "ERROR" (eww) y excepción de Anki
 
+> **Estado actual:** este overlay está **desactivado por defecto**
+> (`EWW_ENABLED=0` en `scripts/fallout-alert-mode.sh`). El modo alerta roja
+> hoy solo cambia la paleta del escritorio (theme-red) y tiñe el wallpaper; la
+> lista de texto "ERROR / SIN COMPLETAR" se eliminó del wallpaper. Esta guía
+> queda como referencia por si reactivas el overlay (`EWW_ENABLED=1`).
+
 Cuando el modo ERROR está activo, una palabra **ERROR** flota **encima de
 todas las ventanas** (capa `overlay` de Hyprland) pero con *click-through*:
 los clics pasan a lo que haya debajo, así que no bloquea el trabajo.
