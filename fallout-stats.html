@@ -531,11 +531,11 @@ const DECK_SYNC = [
   { stat: "EAR", deck: "Ear Training", label: "tarjetas" },
   { stat: "GEORGIA", deck: "Georgia", label: "tarjetas" }
 ];
-// Meta diaria de Anki: "nuevas aprendidas hoy" = el contador de tarjetas sin
-// ver (Unseen) de la categoría bajó AL MENOS esta cantidad hoy. Es el mismo
-// dato que el add-on "More Overview Stats" (columna Unseen): fiable desde el
-// celular porque AnkiConnect lee la colección ya sincronizada con AnkiWeb.
-const ANKI_QUOTAS = { HACKERMAN: 25, EAR: 11, GEORGIA: 5, LANGUAGES: 16 };
+// Estado diario de Anki: "listo" = no quedan nuevas para hoy (getDeckStats
+// new_count == 0, respeta el límite diario del mazo y su jerarquía). El
+// contador visible es el Unseen (findCards is:new), igual que el add-on
+// "More Overview Stats" — fiable desde el celular porque AnkiConnect lee la
+// colección ya sincronizada con AnkiWeb.
 // HACKERMAN se desglosa por deck; cada deck tiene su casilla (logo + contador
 // restante). `kw` se matchea contra un subdeck directo de Hackerman o contra un
 // mazo a nivel raíz (cubre antes y después de fusionar SQL/PYTHON en Anki).
@@ -569,10 +569,10 @@ async function anki(action, params) {
   return data.result;
 }
 
-function updateSyncedRow(statName, remaining, total, live) {
+function updateSyncedRow(statName, remaining, total, live, newRemaining) {
   const idx = SPECIAL.findIndex(s => s.name === statName);
   if (idx < 0) return;
-  cacheAnki(statName, remaining, total);
+  cacheAnki(statName, remaining, total, newRemaining);
   // El snapshot diario ("nuevas aprendidas hoy") solo se graba con datos EN
   // VIVO de AnkiConnect; la caché aplicada al cargar no debe tocar el historial.
   if (live !== false) ankiNewToday(statName, remaining);
@@ -595,9 +595,10 @@ const ANKI_SNAP_KEY = "vt_anki_snap";
 function loadAnkiCache() {
   try { return JSON.parse(localStorage.getItem(ANKI_CACHE_KEY)) || {}; } catch (e) { return {}; }
 }
-function cacheAnki(key, remaining, total) {
+function cacheAnki(key, remaining, total, newRemaining) {
   const c = loadAnkiCache();
-  c[key] = { remaining, total };
+  c[key] = Object.assign({}, c[key], { remaining, total },
+    newRemaining != null ? { newRemaining } : {});
   try { localStorage.setItem(ANKI_CACHE_KEY, JSON.stringify(c)); } catch (e) { /* sin almacenamiento */ }
 }
 function applyAnkiCache() {
@@ -641,7 +642,15 @@ async function syncAnki() {
       }
       // Contador regresivo: el número visible es lo que queda sin ver (Unseen),
       // idéntico a la columna "Unseen" del add-on More Overview Stats.
-      updateSyncedRow(cfg.stat, newIds.length, total);
+      // Nuevas restantes HOY según Anki: getDeckStats(new_count) respeta el
+      // límite diario del mazo (incluye su jerarquía) — "¿quedan nuevas hoy?".
+      let newRemaining = null;
+      try {
+        const st = await anki("getDeckStats", { decks: [match] });
+        const entry = st ? Object.values(st)[0] : null;
+        newRemaining = (entry && entry.new_count != null) ? entry.new_count : null;
+      } catch (e) { /* sin dato de stats: se conserva el de la caché */ }
+      updateSyncedRow(cfg.stat, newIds.length, total, true, newRemaining);
     }
   } catch (e) {
     /* Anki sin conexión: se muestran los valores de la caché */
@@ -780,15 +789,13 @@ function updateAnkiStatus(s) {
     const c = loadAnkiCache()[s.name] || {};
     if (c.total != null) {
       const remaining = c.remaining != null ? c.remaining : c.total;
-      const quota = ANKI_QUOTAS[s.name];
-      const today = ankiNewTodayNow(s.name);
       text = `${s.name}: ${remaining} restantes de ${c.total}`;
       if (remaining === 0) {
         text += ` — categoría completada ✓`;
-      } else if (quota != null) {
-        text += today >= quota
+      } else if (c.newRemaining != null) {
+        text += c.newRemaining === 0
           ? ` — ¡todo listo por hoy! ✓`
-          : ` — faltan ${Math.max(0, quota - today)} nuevas para ${quota}`;
+          : ` — faltan ${c.newRemaining} nuevas`;
       }
     }
   }
@@ -1056,22 +1063,20 @@ function renderLangBoxes() {
   }).join("");
 }
 function hackAlertActive(stat) {
-  const quota = ANKI_QUOTAS[stat];
-  if (quota == null) return false;
   const c = loadAnkiCache()[stat] || {};
   const remaining = c.remaining != null ? c.remaining : c.total;
   if (remaining == null) return false;
   if (remaining <= 0) return false; // categoría completada
-  return ankiNewTodayNow(stat) < quota;
+  if (c.newRemaining == null) return false; // sin dato de Anki: no alertar
+  return c.newRemaining > 0; // quedan nuevas para hoy
 }
 function ankiQuotaMet(stat) {
-  const quota = ANKI_QUOTAS[stat];
-  if (quota == null) return false;
   const c = loadAnkiCache()[stat] || {};
   const remaining = c.remaining != null ? c.remaining : c.total;
   if (remaining == null) return false;
   if (remaining <= 0) return true; // categoría completada
-  return ankiNewTodayNow(stat) >= quota;
+  if (c.newRemaining == null) return false;
+  return c.newRemaining === 0; // no quedan nuevas para hoy → listo
 }
 function activeErrors() {
   const errs = [];
