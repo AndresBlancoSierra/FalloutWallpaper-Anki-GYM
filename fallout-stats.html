@@ -583,6 +583,7 @@ function updateSyncedRow(statName, remaining, total, live) {
   row.querySelector(".segbar").innerHTML = segBar(10, Math.round(pct * 10));
   row.querySelector(".val").textContent = remaining;
   row.title = `${remaining} restantes de ${total} (${Math.round(pct * 100)}%)`;
+  row.classList.toggle("done", ankiQuotaMet(statName));
   if (idx === currentSel) updateAnkiStatus(SPECIAL[idx]);
   checkAlert();
 }
@@ -786,7 +787,7 @@ function updateAnkiStatus(s) {
         text += ` — categoría completada ✓`;
       } else if (quota != null) {
         text += today >= quota
-          ? ` — meta ${quota} nuevas hoy ✓`
+          ? ` — ¡todo listo por hoy! ✓`
           : ` — faltan ${Math.max(0, quota - today)} nuevas para ${quota}`;
       }
     }
@@ -921,13 +922,19 @@ function ankiNewToday(key, current) {
   let delta = 0;
   if (current != null) {
     if (e.lastDate && e.lastDate < todayStr()) {
-      delta = Math.max(0, e.lastUnseen - current);
-      s[key] = { lastDate: todayStr(), lastUnseen: current, delta };
+      // Nuevo día: la línea base es el último valor del día anterior.
+      const dayStart = e.lastUnseen;
+      delta = Math.max(0, dayStart - current);
+      s[key] = { lastDate: todayStr(), dayStart, lastUnseen: current, delta };
     } else if (e.lastDate === todayStr()) {
-      delta = e.delta || 0;
-      s[key] = { lastDate: todayStr(), lastUnseen: Math.min(e.lastUnseen, current), delta };
+      // Mismo día: se recalcula el delta contra la línea base del día (acumula
+      // el estudio en vivo, es monótono y no se rompe si se importan tarjetas).
+      const dayStart = (e.dayStart != null) ? e.dayStart : e.lastUnseen;
+      const lastUnseen = Math.min(e.lastUnseen, current);
+      delta = Math.max(0, dayStart - lastUnseen);
+      s[key] = { lastDate: todayStr(), dayStart, lastUnseen, delta };
     } else {
-      s[key] = { lastDate: todayStr(), lastUnseen: current, delta: 0 };
+      s[key] = { lastDate: todayStr(), dayStart: current, lastUnseen: current, delta: 0 };
     }
     saveAnkiSnap(s);
   }
@@ -1057,6 +1064,15 @@ function hackAlertActive(stat) {
   if (remaining <= 0) return false; // categoría completada
   return ankiNewTodayNow(stat) < quota;
 }
+function ankiQuotaMet(stat) {
+  const quota = ANKI_QUOTAS[stat];
+  if (quota == null) return false;
+  const c = loadAnkiCache()[stat] || {};
+  const remaining = c.remaining != null ? c.remaining : c.total;
+  if (remaining == null) return false;
+  if (remaining <= 0) return true; // categoría completada
+  return ankiNewTodayNow(stat) >= quota;
+}
 function activeErrors() {
   const errs = [];
   for (const s of SPECIAL) {
@@ -1116,7 +1132,7 @@ function updateVaultBoyDone() {
   const box = document.querySelector(".vaultboy-box");
   const s = SPECIAL[currentSel];
   if (!box || !s) return;
-  box.classList.toggle("done", doneToday(s.name) || isComplete(s));
+  box.classList.toggle("done", doneToday(s.name) || isComplete(s) || (s.max == null && ankiQuotaMet(s.name)));
 }
 
 /* ================= GYM (OBSIDIAN) ================= */
